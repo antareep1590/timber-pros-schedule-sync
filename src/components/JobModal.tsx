@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { X, Save } from "lucide-react";
@@ -37,6 +36,7 @@ interface JobModalProps {
   onSave: (job: Job) => void;
   job: Job | null;
   selectedDate: Date | null;
+  readOnly?: boolean; // Add the readOnly prop as optional
 }
 
 // Mock data for dropdowns
@@ -49,7 +49,7 @@ const mockClients = [
 const mockSiteManagers = ["Person A", "Person B", "Person C"];
 const mockCrewMembers = ["Crew A", "Crew B", "Crew C", "Crew D", "Crew E"];
 
-const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps) => {
+const JobModal = ({ isOpen, onClose, onSave, job, selectedDate, readOnly = false }: JobModalProps) => {
   const [formData, setFormData] = useState<Job>({
     id: "",
     workOrderId: "",
@@ -99,11 +99,13 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
   }, [job, selectedDate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    if (readOnly) return; // Don't update state if in readOnly mode
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
   const handleWorkOrderSelect = (workOrderId: string) => {
+    if (readOnly) return; // Don't update state if in readOnly mode
     if (!selectedWorkOrders.includes(workOrderId)) {
       const updatedWorkOrders = [...selectedWorkOrders, workOrderId];
       setSelectedWorkOrders(updatedWorkOrders);
@@ -113,12 +115,14 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
   };
 
   const handleRemoveWorkOrder = (workOrderId: string) => {
+    if (readOnly) return; // Don't update state if in readOnly mode
     const updatedWorkOrders = selectedWorkOrders.filter(wo => wo !== workOrderId);
     setSelectedWorkOrders(updatedWorkOrders);
     setFormData({ ...formData, workOrderId: updatedWorkOrders });
   };
 
   const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (readOnly) return; // Don't update state if in readOnly mode
     const clientName = e.target.value;
     const client = mockClients.find(c => c.name === clientName);
     
@@ -132,6 +136,7 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
   };
 
   const handleCrewMemberToggle = (crewMember: string) => {
+    if (readOnly) return; // Don't update state if in readOnly mode
     let updatedCrewMembers: string[];
     
     if (formData.crewMembers.includes(crewMember)) {
@@ -144,6 +149,7 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
   };
 
   const handleStatusChange = (status: string) => {
+    if (readOnly) return; // Don't update state if in readOnly mode
     setFormData({
       ...formData,
       completed: status === 'completed',
@@ -155,7 +161,9 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    if (!readOnly) {
+      onSave(formData);
+    }
   };
 
   const getStatusValue = (): string => {
@@ -170,7 +178,7 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
           <DialogTitle className="text-xl font-medium text-gray-800">
-            {job ? "Edit Job" : "Create New Job"}
+            {job ? (readOnly ? "View Job" : "Edit Job") : "Create New Job"}
           </DialogTitle>
         </DialogHeader>
 
@@ -181,8 +189,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
             <div className="flex flex-col gap-2">
               <div className="relative">
                 <div 
-                  className="border rounded-md p-2 min-h-10 flex flex-wrap gap-2 cursor-pointer" 
-                  onClick={() => setShowWorkOrderDropdown(!showWorkOrderDropdown)}
+                  className={`border rounded-md p-2 min-h-10 flex flex-wrap gap-2 ${!readOnly ? 'cursor-pointer' : ''}`}
+                  onClick={() => !readOnly && setShowWorkOrderDropdown(!showWorkOrderDropdown)}
                 >
                   {selectedWorkOrders.length > 0 ? (
                     selectedWorkOrders.map(wo => (
@@ -205,7 +213,7 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                   )}
                 </div>
                 
-                {showWorkOrderDropdown && (
+                {showWorkOrderDropdown && !readOnly && (
                   <div className="absolute z-50 mt-1 bg-white border rounded-md shadow-lg w-full max-h-40 overflow-y-auto">
                     {mockWorkOrders
                       .filter(wo => !selectedWorkOrders.includes(wo))
@@ -236,7 +244,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                     <select
                       value={formData.clientName}
                       onChange={handleClientChange}
-                      className="w-full border rounded-md p-2 bg-white text-gray-800 focus:border-primary focus:ring-1 focus:ring-primary"
+                      disabled={readOnly}
+                      className={`w-full border rounded-md p-2 bg-white text-gray-800 focus:border-primary focus:ring-1 focus:ring-primary ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                     >
                       {mockClients.map(client => (
                         <option key={client.name} value={client.name}>{client.name}</option>
@@ -261,7 +270,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                       name="siteManager"
                       value={formData.siteManager}
                       onChange={handleChange}
-                      className="w-full border rounded-md p-2 bg-white text-gray-800 focus:border-primary focus:ring-1 focus:ring-primary"
+                      disabled={readOnly}
+                      className={`w-full border rounded-md p-2 bg-white text-gray-800 focus:border-primary focus:ring-1 focus:ring-primary ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                     >
                       {mockSiteManagers.map(manager => (
                         <option key={manager} value={manager}>{manager}</option>
@@ -278,7 +288,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                             id={`crew-${index}-${crew}`}
                             checked={formData.crewMembers.includes(crew)}
                             onCheckedChange={() => handleCrewMemberToggle(crew)}
-                            className="mr-2"
+                            disabled={readOnly}
+                            className={`mr-2 ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                           />
                           <label htmlFor={`crew-${index}-${crew}`} className="text-sm text-gray-700">
                             {crew}
@@ -302,7 +313,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                       value={formData.name} 
                       onChange={handleChange}
                       placeholder="Job Name"
-                      className="w-full"
+                      disabled={readOnly}
+                      className={`w-full ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
@@ -313,7 +325,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                       name="date" 
                       value={formData.date} 
                       onChange={handleChange}
-                      className="w-full"
+                      disabled={readOnly}
+                      className={`w-full ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
@@ -325,7 +338,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                       onChange={handleChange}
                       placeholder="Job description..."
                       rows={2}
-                      className="w-full"
+                      disabled={readOnly}
+                      className={`w-full ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
@@ -336,7 +350,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                       name="startTime" 
                       value={formData.startTime} 
                       onChange={handleChange}
-                      className="w-full"
+                      disabled={readOnly}
+                      className={`w-full ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
@@ -347,18 +362,20 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                       name="endTime" 
                       value={formData.endTime} 
                       onChange={handleChange}
-                      className="w-full"
+                      disabled={readOnly}
+                      className={`w-full ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
                   {/* Status Radio Buttons (only for Edit mode) */}
-                  {job && (
+                  {job && !readOnly && (
                     <div className="md:col-span-2">
                       <label className="block text-sm mb-2 text-gray-600">Status</label>
                       <RadioGroup 
                         value={getStatusValue()} 
                         onValueChange={handleStatusChange}
                         className="flex flex-wrap gap-4"
+                        disabled={readOnly}
                       >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="completed" id="completed" />
@@ -375,6 +392,27 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
                       </RadioGroup>
                     </div>
                   )}
+
+                  {/* Status display for read-only mode */}
+                  {job && readOnly && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm mb-2 text-gray-600">Status</label>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.completed && (
+                          <Badge className="bg-green-100 text-green-800">Completed</Badge>
+                        )}
+                        {formData.rescheduled && (
+                          <Badge className="bg-yellow-100 text-yellow-800">Rescheduled</Badge>
+                        )}
+                        {formData.cancelled && (
+                          <Badge className="bg-red-100 text-red-800">Cancelled</Badge>
+                        )}
+                        {!formData.completed && !formData.rescheduled && !formData.cancelled && (
+                          <Badge className="bg-blue-100 text-blue-800">Active</Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -389,7 +427,8 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
               onChange={handleChange}
               placeholder="Additional notes..."
               rows={3}
-              className="w-full"
+              disabled={readOnly}
+              className={`w-full ${readOnly ? 'opacity-75 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -401,14 +440,16 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
               onClick={onClose}
               className="border-gray-300 text-gray-700"
             >
-              <X className="mr-1 h-4 w-4" /> Cancel
+              <X className="mr-1 h-4 w-4" /> {readOnly ? "Close" : "Cancel"}
             </Button>
-            <Button 
-              type="submit" 
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Save className="mr-1 h-4 w-4" /> Save
-            </Button>
+            {!readOnly && (
+              <Button 
+                type="submit" 
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Save className="mr-1 h-4 w-4" /> Save
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
