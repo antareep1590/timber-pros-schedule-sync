@@ -1,12 +1,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Circle, CircleDot, CircleX, Pencil, Plus } from "lucide-react";
+import { Circle, Check, CircleX, Pencil, Plus, Undo2, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface AnnotationType {
+  id: string;
   type: 'green-circle' | 'red-circle' | 'blue-circle' | 'yellow-line' | 'pink-line';
   x: number;
   y: number;
@@ -29,13 +31,41 @@ const demoPhotos: Photo[] = [
     id: '1',
     src: 'https://images.unsplash.com/photo-1472396961693-142e6e269027',
     alt: 'Property with trees',
-    annotations: []
+    annotations: [
+      {
+        id: 'a1',
+        type: 'green-circle',
+        x: 150,
+        y: 120,
+        width: 40,
+        height: 40,
+        note: 'Tree to cut'
+      },
+      {
+        id: 'a2',
+        type: 'red-circle',
+        x: 250,
+        y: 180,
+        width: 40,
+        height: 40,
+        note: 'Preserve this tree'
+      }
+    ]
   },
   {
     id: '2',
     src: 'https://images.unsplash.com/photo-1466721591366-2d5fba72006d',
     alt: 'Lawn with trees',
-    annotations: []
+    annotations: [
+      {
+        id: 'a3',
+        type: 'yellow-line',
+        x: 0,
+        y: 0,
+        points: [{ x: 120, y: 150 }, { x: 300, y: 250 }],
+        note: 'Primary path'
+      }
+    ]
   },
   {
     id: '3',
@@ -71,16 +101,19 @@ const AnnotatedPhotoUpload = () => {
   const [currentAnnotation, setCurrentAnnotation] = useState<AnnotationType | null>(null);
   const [noteText, setNoteText] = useState("");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [hoveredAnnotation, setHoveredAnnotation] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [annotationPosition, setAnnotationPosition] = useState({ x: 0, y: 0 });
 
   // Effect to render annotations whenever the selectedPhoto changes or annotations are added/removed
   useEffect(() => {
     if (selectedPhoto && isAnnotating) {
       renderAnnotations();
     }
-  }, [selectedPhoto, isAnnotating]);
+  }, [selectedPhoto, isAnnotating, hoveredAnnotation]);
   
   const openAnnotationMode = (photo: Photo) => {
     setSelectedPhoto(photo);
@@ -107,6 +140,7 @@ const AnnotatedPhotoUpload = () => {
     
     // Create a new annotation based on the selected type
     const newAnnotation: AnnotationType = {
+      id: `a${Date.now()}`,
       type: annotationType,
       x,
       y,
@@ -118,7 +152,9 @@ const AnnotatedPhotoUpload = () => {
     setCurrentAnnotation(newAnnotation);
     
     if (annotationType.includes('circle')) {
-      // For circles, we immediately prepare to save the annotation
+      // For circles, we set position for the note dialog
+      setAnnotationPosition({ x, y });
+      // Immediate show dialog for circles
       setShowNoteDialog(true);
     }
   };
@@ -142,12 +178,26 @@ const AnnotatedPhotoUpload = () => {
     renderAnnotations();
   };
 
-  const handleCanvasMouseUp = () => {
-    if (!isDrawing) return;
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !currentAnnotation || !annotationType.includes('line')) return;
     
     setIsDrawing(false);
     
     if (currentAnnotation && annotationType.includes('line') && currentAnnotation.points && currentAnnotation.points.length > 1) {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Calculate midpoint of the line for note placement
+      const x1 = currentAnnotation.points[0].x;
+      const y1 = currentAnnotation.points[0].y;
+      const x2 = x;
+      const y2 = y;
+      
+      const midX = (x1 + x2) / 2;
+      const midY = (y1 + y2) / 2;
+      
+      setAnnotationPosition({ x: midX, y: midY });
       setShowNoteDialog(true);
     }
   };
@@ -191,6 +241,57 @@ const AnnotatedPhotoUpload = () => {
     renderAnnotations();
   };
 
+  const deleteAnnotation = (annotationId: string) => {
+    if (!selectedPhoto) return;
+    
+    const updatedPhotos = photos.map(photo => {
+      if (photo.id === selectedPhoto.id) {
+        return {
+          ...photo,
+          annotations: photo.annotations.filter(a => a.id !== annotationId)
+        };
+      }
+      return photo;
+    });
+    
+    setPhotos(updatedPhotos);
+    
+    // Update the selectedPhoto reference
+    const updatedSelectedPhoto = updatedPhotos.find(p => p.id === selectedPhoto.id);
+    if (updatedSelectedPhoto) {
+      setSelectedPhoto(updatedSelectedPhoto);
+    }
+  };
+
+  const handleAnnotationHover = (annotationId: string | null) => {
+    setHoveredAnnotation(annotationId);
+    renderAnnotations();
+  };
+
+  const undoLastAnnotation = () => {
+    if (!selectedPhoto || selectedPhoto.annotations.length === 0) return;
+    
+    const updatedPhotos = photos.map(photo => {
+      if (photo.id === selectedPhoto.id) {
+        const newAnnotations = [...photo.annotations];
+        newAnnotations.pop(); // Remove the last annotation
+        return {
+          ...photo,
+          annotations: newAnnotations
+        };
+      }
+      return photo;
+    });
+    
+    setPhotos(updatedPhotos);
+    
+    // Update the selectedPhoto reference
+    const updatedSelectedPhoto = updatedPhotos.find(p => p.id === selectedPhoto.id);
+    if (updatedSelectedPhoto) {
+      setSelectedPhoto(updatedSelectedPhoto);
+    }
+  };
+
   const renderAnnotations = () => {
     if (!canvasRef.current || !selectedPhoto || !imageRef.current) return;
     
@@ -202,14 +303,20 @@ const AnnotatedPhotoUpload = () => {
     
     // Ensure canvas size matches the image
     if (imageRef.current.complete && imageRef.current.naturalWidth) {
-      canvasRef.current.width = imageRef.current.naturalWidth;
-      canvasRef.current.height = imageRef.current.naturalHeight;
-      ctx.drawImage(imageRef.current, 0, 0);
+      canvasRef.current.width = imageRef.current.clientWidth;
+      canvasRef.current.height = imageRef.current.clientHeight;
+      ctx.drawImage(imageRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
     }
     
     // Draw all saved annotations
     selectedPhoto.annotations.forEach(ann => {
-      drawAnnotation(ctx, ann);
+      const isHovered = hoveredAnnotation === ann.id;
+      drawAnnotation(ctx, ann, isHovered);
+      
+      // Draw annotation note tooltip when hovered
+      if (isHovered && ann.note) {
+        drawAnnotationTooltip(ctx, ann);
+      }
     });
     
     // Draw current annotation if exists
@@ -218,31 +325,67 @@ const AnnotatedPhotoUpload = () => {
     }
   };
   
-  const drawAnnotation = (ctx: CanvasRenderingContext2D, ann: AnnotationType) => {
+  const drawAnnotation = (ctx: CanvasRenderingContext2D, ann: AnnotationType, isHovered: boolean = false) => {
     ctx.beginPath();
     
+    // Set line width based on hover state
+    ctx.lineWidth = isHovered ? 4 : 3;
+    
     if (ann.type.includes('circle')) {
-      ctx.lineWidth = 3;
       const radius = (ann.width || 40) / 2;
       
       // Set color based on annotation type
-      if (ann.type === 'green-circle') ctx.strokeStyle = 'green';
-      else if (ann.type === 'red-circle') ctx.strokeStyle = 'red';
-      else if (ann.type === 'blue-circle') ctx.strokeStyle = 'blue';
+      if (ann.type === 'green-circle') ctx.strokeStyle = '#22c55e'; // green-500
+      else if (ann.type === 'red-circle') ctx.strokeStyle = '#ef4444'; // red-500
+      else if (ann.type === 'blue-circle') ctx.strokeStyle = '#3b82f6'; // blue-500
       
       ctx.arc(ann.x, ann.y, radius, 0, 2 * Math.PI);
     } else if (ann.type.includes('line') && ann.points && ann.points.length > 1) {
-      ctx.lineWidth = 5;
-      
       // Set color based on annotation type
-      if (ann.type === 'yellow-line') ctx.strokeStyle = 'yellow';
-      else if (ann.type === 'pink-line') ctx.strokeStyle = 'pink';
+      if (ann.type === 'yellow-line') ctx.strokeStyle = '#eab308'; // yellow-500
+      else if (ann.type === 'pink-line') ctx.strokeStyle = '#ec4899'; // pink-500
       
       ctx.moveTo(ann.points[0].x, ann.points[0].y);
       ctx.lineTo(ann.points[1].x, ann.points[1].y);
     }
     
     ctx.stroke();
+  };
+
+  const drawAnnotationTooltip = (ctx: CanvasRenderingContext2D, ann: AnnotationType) => {
+    if (!ann.note) return;
+    
+    // Calculate tooltip position
+    let x, y;
+    if (ann.type.includes('circle')) {
+      x = ann.x + 20;
+      y = ann.y - 20;
+    } else if (ann.points && ann.points.length > 1) {
+      // For lines, put tooltip at midpoint
+      x = (ann.points[0].x + ann.points[1].x) / 2 + 10;
+      y = (ann.points[0].y + ann.points[1].y) / 2 - 10;
+    } else {
+      return;
+    }
+    
+    // Draw tooltip background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 1;
+    
+    const textMetrics = ctx.measureText(ann.note);
+    const textWidth = textMetrics.width + 10;
+    const textHeight = 25;
+    
+    ctx.beginPath();
+    ctx.roundRect(x, y - textHeight, textWidth, textHeight, 4);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Draw tooltip text
+    ctx.fillStyle = 'black';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(ann.note, x + 5, y - 8);
   };
 
   const loadImage = (src: string) => {
@@ -268,7 +411,10 @@ const AnnotatedPhotoUpload = () => {
           {photos.map(photo => (
             <div 
               key={photo.id} 
-              className="border rounded-md p-2 hover:shadow-md cursor-pointer"
+              className={cn(
+                "border rounded-lg p-2 hover:shadow-md transition-all cursor-pointer",
+                "transform hover:scale-[1.02] duration-200"
+              )}
               onClick={() => openAnnotationMode(photo)}
             >
               <img 
@@ -299,7 +445,7 @@ const AnnotatedPhotoUpload = () => {
             </div>
           ))}
           
-          <div className="border rounded-md p-2 flex flex-col items-center justify-center bg-gray-50 h-64">
+          <div className="border rounded-lg p-2 flex flex-col items-center justify-center bg-gray-50 h-64">
             <Button variant="ghost" className="flex-col h-full w-full">
               <Plus className="h-8 w-8 mb-2" />
               <span>Add New Photo</span>
@@ -307,15 +453,27 @@ const AnnotatedPhotoUpload = () => {
           </div>
         </div>
       ) : (
-        <div className="border rounded-md p-4">
+        <div className="border rounded-lg p-4 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">Annotate Photo</h3>
-            <Button variant="outline" onClick={closeAnnotationMode}>Close</Button>
+            <div className="flex gap-2">
+              {selectedPhoto && selectedPhoto.annotations.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={undoLastAnnotation}
+                  className="flex items-center"
+                >
+                  <Undo2 className="h-4 w-4 mr-1" /> Undo
+                </Button>
+              )}
+              <Button variant="outline" onClick={closeAnnotationMode}>Close</Button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="col-span-1">
-              <div className="space-y-4">
+              <div className="space-y-4 sticky top-4">
                 <div>
                   <h4 className="font-medium mb-2">Annotation Types</h4>
                   <RadioGroup 
@@ -367,18 +525,51 @@ const AnnotatedPhotoUpload = () => {
                 
                 {selectedPhoto?.annotations.length > 0 && (
                   <div>
-                    <h4 className="font-medium mb-2">Annotations</h4>
-                    <div className="space-y-1 text-sm">
+                    <h4 className="font-medium mb-2">Annotations Summary</h4>
+                    <div className="space-y-2 text-sm max-h-[300px] overflow-y-auto pr-1">
                       {selectedPhoto.annotations.map((ann, i) => (
-                        <div key={i} className="p-2 border rounded">
-                          <div className="font-medium">
-                            {ann.type.replace('-', ' ')}
-                          </div>
-                          {ann.note && (
-                            <div className="text-xs text-gray-600">
-                              Note: {ann.note}
-                            </div>
+                        <div 
+                          key={ann.id} 
+                          className={cn(
+                            "p-2 border rounded-md group flex justify-between transition-all",
+                            hoveredAnnotation === ann.id ? "bg-gray-50 shadow-sm" : "",
                           )}
+                          onMouseEnter={() => handleAnnotationHover(ann.id)}
+                          onMouseLeave={() => handleAnnotationHover(null)}
+                        >
+                          <div>
+                            <div className="font-medium flex items-center">
+                              {ann.type.includes('circle') ? (
+                                <Circle 
+                                  className={cn(
+                                    "h-3 w-3 mr-1",
+                                    ann.type === 'green-circle' ? "text-green-500" : 
+                                    ann.type === 'red-circle' ? "text-red-500" : 
+                                    "text-blue-500"
+                                  )} 
+                                />
+                              ) : (
+                                <div className={cn(
+                                  "h-[2px] w-3 mr-1",
+                                  ann.type === 'yellow-line' ? "bg-yellow-500" : "bg-pink-500"
+                                )} />
+                              )}
+                              {ann.type.split('-').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                              ).join(' ')}
+                            </div>
+                            {ann.note && (
+                              <div className="text-xs text-gray-600 mt-1 ml-4">
+                                {ann.note}
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => deleteAnnotation(ann.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -389,37 +580,41 @@ const AnnotatedPhotoUpload = () => {
                 <div className="bg-blue-50 p-3 rounded-md mt-4">
                   <h4 className="text-sm font-medium text-blue-800 mb-1">Instructions:</h4>
                   <ul className="list-disc list-inside text-xs text-blue-800">
-                    <li>Click on the image to place an annotation</li>
-                    <li>For lines, click and drag to draw</li>
-                    <li>Add a note after placing each annotation</li>
+                    <li>Select an annotation type</li>
+                    <li>Click on the image to place a circle</li>
+                    <li>Click and drag to draw a line</li>
+                    <li>Add an optional note to explain the annotation</li>
+                    <li>Hover over annotations to see details</li>
                   </ul>
                 </div>
               </div>
             </div>
             
-            <div className="col-span-4 relative">
+            <div className="col-span-4 relative" ref={containerRef}>
               {selectedPhoto && (
                 <>
-                  <img
-                    ref={imageRef}
-                    src={selectedPhoto.src}
-                    alt={selectedPhoto.alt}
-                    className="w-full h-auto hidden"
-                    onLoad={() => renderAnnotations()}
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    className="border cursor-crosshair w-full"
-                    onMouseDown={handleCanvasMouseDown}
-                    onMouseMove={handleCanvasMouseMove}
-                    onMouseUp={handleCanvasMouseUp}
-                    onMouseLeave={handleCanvasMouseUp}
-                  />
+                  <div className="border rounded-lg overflow-hidden shadow-lg bg-white transition-all">
+                    <img
+                      ref={imageRef}
+                      src={selectedPhoto.src}
+                      alt={selectedPhoto.alt}
+                      className="w-full h-auto"
+                      onLoad={() => renderAnnotations()}
+                    />
+                    <canvas
+                      ref={canvasRef}
+                      className="absolute top-0 left-0 w-full h-full cursor-crosshair"
+                      onMouseDown={handleCanvasMouseDown}
+                      onMouseMove={handleCanvasMouseMove}
+                      onMouseUp={handleCanvasMouseUp}
+                      onMouseLeave={handleCanvasMouseUp}
+                    />
+                  </div>
                   
                   {showNoteDialog && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                      <div className="bg-white p-4 rounded-md w-full max-w-md">
-                        <h3 className="text-lg font-medium mb-3">Add Note (Optional)</h3>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+                      <div className="bg-white p-4 rounded-lg w-full max-w-md shadow-xl">
+                        <h3 className="text-lg font-medium mb-3">Add Note</h3>
                         <Textarea
                           placeholder="E.g., This tree is leaning toward the roof"
                           value={noteText}
@@ -428,7 +623,9 @@ const AnnotatedPhotoUpload = () => {
                         />
                         <div className="flex justify-end gap-2">
                           <Button variant="outline" onClick={cancelAnnotation}>Cancel</Button>
-                          <Button onClick={saveAnnotation}>Save Annotation</Button>
+                          <Button onClick={saveAnnotation} className="bg-primary text-white">
+                            <Check className="h-4 w-4 mr-1" /> Save Annotation
+                          </Button>
                         </div>
                       </div>
                     </div>
