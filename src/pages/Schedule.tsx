@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,6 +82,16 @@ const Schedule = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [filterSiteManagers, setFilterSiteManagers] = useState<string[]>([]);
   const [filterCrewMembers, setFilterCrewMembers] = useState<string[]>([]);
+  const [userRole, setUserRole] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    // Get user role from localStorage
+    const role = localStorage.getItem("userRole") || "";
+    const name = localStorage.getItem("userName") || "";
+    setUserRole(role);
+    setUserName(name);
+  }, []);
 
   const firstDayOfMonth = startOfMonth(currentDate);
   const lastDayOfMonth = endOfMonth(currentDate);
@@ -100,6 +110,11 @@ const Schedule = () => {
   };
 
   const handleDateClick = (date: Date) => {
+    if (userRole === "crew") {
+      // Crew members can't create new jobs
+      return;
+    }
+    
     setSelectedDate(date);
     setSelectedJob(null);
     setIsModalOpen(true);
@@ -112,6 +127,11 @@ const Schedule = () => {
   };
 
   const handleSaveJob = (job: Job) => {
+    if (userRole === "crew") {
+      // Crew members can't edit jobs
+      return;
+    }
+    
     if (selectedJob) {
       // Edit existing job
       setJobs(jobs.map(j => j.id === job.id ? job : j));
@@ -147,20 +167,40 @@ const Schedule = () => {
     }
   };
 
-  const filteredJobs = jobs.filter(job => {
-    // Filter by site manager if any are selected
-    const siteManagerMatch = filterSiteManagers.length === 0 || 
-      (typeof job.siteManager === 'string' && filterSiteManagers.includes(job.siteManager));
+  // Filter jobs based on user role
+  const getFilteredJobs = () => {
+    let filteredResults = jobs;
     
-    // Filter by crew member if any are selected
-    const crewMemberMatch = filterCrewMembers.length === 0 || 
-      job.crewMembers.some(cm => filterCrewMembers.includes(cm));
+    // First filter by site manager and crew member if selected
+    if (filterSiteManagers.length > 0 || filterCrewMembers.length > 0) {
+      filteredResults = filteredResults.filter(job => {
+        // Filter by site manager if any are selected
+        const siteManagerMatch = filterSiteManagers.length === 0 || 
+          (typeof job.siteManager === 'string' && filterSiteManagers.includes(job.siteManager));
+        
+        // Filter by crew member if any are selected
+        const crewMemberMatch = filterCrewMembers.length === 0 || 
+          job.crewMembers.some(cm => filterCrewMembers.includes(cm));
+        
+        return siteManagerMatch && crewMemberMatch;
+      });
+    }
     
-    return siteManagerMatch && crewMemberMatch;
-  });
+    // Then filter based on user role
+    if (userRole === "crew") {
+      // Crew members only see jobs assigned to them
+      return filteredResults.filter(job => job.crewMembers.includes(userName));
+    } else if (userRole === "site-manager") {
+      // Site managers see jobs they are assigned to
+      return filteredResults.filter(job => job.siteManager === userName);
+    }
+    
+    // Admins see all jobs
+    return filteredResults;
+  };
 
   const getJobsForDate = (date: Date) => {
-    return filteredJobs.filter(job => isSameDay(parseISO(job.date), date));
+    return getFilteredJobs().filter(job => isSameDay(parseISO(job.date), date));
   };
 
   return (
@@ -171,7 +211,7 @@ const Schedule = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Calendar Section */}
-          <div className="lg:col-span-3 bg-white rounded-lg shadow-sm p-4">
+          <div className={`${userRole === "crew" ? "lg:col-span-4" : "lg:col-span-3"} bg-white rounded-lg shadow-sm p-4`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <CalendarIcon className="h-5 w-5 text-gray-600" />
@@ -218,7 +258,8 @@ const Schedule = () => {
                     className={cn(
                       "min-h-[100px] border p-1",
                       isSameMonth(day, currentDate) ? "bg-white" : "bg-gray-50",
-                      isSameDay(day, new Date()) ? "border-primary" : "border-gray-200"
+                      isSameDay(day, new Date()) ? "border-primary" : "border-gray-200",
+                      userRole !== "crew" ? "cursor-pointer" : ""
                     )}
                     onClick={() => handleDateClick(day)}
                   >
@@ -269,58 +310,60 @@ const Schedule = () => {
             </div>
           </div>
 
-          {/* Filters Section */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            {/* Site Managers Section */}
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {siteManagers.map((manager) => (
-                  <div key={manager} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
-                    <Checkbox 
-                      id={`site-manager-${manager}`}
-                      checked={filterSiteManagers.includes(manager)}
-                      onCheckedChange={() => handleToggleSiteManager(manager)}
-                      className="text-primary focus:ring-primary"
-                    />
-                    <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
-                      <span>{manager}</span>
-                      {filterSiteManagers.includes(manager) && (
-                        <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
-                      )}
-                    </label>
-                  </div>
-                ))}
+          {/* Filters Section - only visible for Admin and Site Manager */}
+          {userRole !== "crew" && (
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              {/* Site Managers Section */}
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                  {siteManagers.map((manager) => (
+                    <div key={manager} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
+                      <Checkbox 
+                        id={`site-manager-${manager}`}
+                        checked={filterSiteManagers.includes(manager)}
+                        onCheckedChange={() => handleToggleSiteManager(manager)}
+                        className="text-primary focus:ring-primary"
+                      />
+                      <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                        <span>{manager}</span>
+                        {filterSiteManagers.includes(manager) && (
+                          <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Crew Members Section - Styled to match Site Managers */}
-            <div>
-              <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {crewMembers.map((crew) => (
-                  <div key={crew} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
-                    <Checkbox 
-                      id={`crew-${crew}`}
-                      checked={filterCrewMembers.includes(crew)}
-                      onCheckedChange={() => handleToggleCrewMember(crew)}
-                      className="text-primary focus:ring-primary"
-                    />
-                    <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
-                      <span>{crew}</span>
-                      {filterCrewMembers.includes(crew) && (
-                        <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
-                      )}
-                    </label>
-                  </div>
-                ))}
+              {/* Crew Members Section */}
+              <div>
+                <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                  {crewMembers.map((crew) => (
+                    <div key={crew} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
+                      <Checkbox 
+                        id={`crew-${crew}`}
+                        checked={filterCrewMembers.includes(crew)}
+                        onCheckedChange={() => handleToggleCrewMember(crew)}
+                        className="text-primary focus:ring-primary"
+                      />
+                      <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                        <span>{crew}</span>
+                        {filterCrewMembers.includes(crew) && (
+                          <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
       
-      {/* Job Modal */}
+      {/* Job Modal - disabled editing for crew members */}
       {isModalOpen && (
         <JobModal
           isOpen={isModalOpen}
@@ -328,6 +371,7 @@ const Schedule = () => {
           onSave={handleSaveJob}
           job={selectedJob}
           selectedDate={selectedDate}
+          readOnly={userRole === "crew"}
         />
       )}
     </div>

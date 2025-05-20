@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,14 +8,45 @@ import { toast } from "@/hooks/use-toast";
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState<string>("");
   
-  // Updated navigation items as per requirement
-  const navItems = [
-    { name: "Work Order", path: "/work-order" },
-    { name: "Schedule", path: "/schedule" },
-  ];
+  useEffect(() => {
+    // Get user role from localStorage
+    const role = localStorage.getItem("userRole") || "";
+    setUserRole(role);
+    
+    // If no role is set, redirect to login
+    if (!role) {
+      navigate('/login');
+    }
+  }, [navigate]);
+  
+  // Define navigation items based on user role
+  const getNavItems = () => {
+    const baseItems = [
+      { name: "Work Order", path: "/work-order" },
+      { name: "Schedule", path: "/schedule" },
+      { name: "Time Tracker", path: "/time-tracker" },
+    ];
+    
+    if (userRole === "admin") {
+      // Admin has access to all pages
+      return baseItems;
+    } else if (userRole === "site-manager") {
+      // Site Manager has access to all pages
+      return baseItems;
+    } else {
+      // Crew Member only has access to Schedule and Time Tracker
+      return baseItems.filter(item => item.path !== "/work-order");
+    }
+  };
 
   const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userName");
+    
     toast({
       title: "Logged out",
       description: "You have been logged out successfully.",
@@ -28,7 +60,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 mr-6">
-              {/* Updated logo */}
+              {/* Logo */}
               <div className="h-10 w-10 rounded-full overflow-hidden">
                 <img 
                   src="/lovable-uploads/d9033f50-a849-494d-bf3e-20b2a4f22bf0.png" 
@@ -39,7 +71,7 @@ const Navbar = () => {
             </div>
             
             <div className="hidden md:flex items-center space-x-8">
-              {navItems.map((item) => (
+              {getNavItems().map((item) => (
                 <Link
                   key={item.name}
                   to={item.path}
@@ -56,6 +88,15 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {userRole && (
+              <div className="mr-4 text-sm text-gray-600">
+                <span className="font-medium">
+                  {userRole === "admin" ? "Admin" : 
+                   userRole === "site-manager" ? "Site Manager" : "Crew Member"}
+                </span>
+              </div>
+            )}
+            
             {/* Logout button */}
             <Button 
               variant="ghost" 

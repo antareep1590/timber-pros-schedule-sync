@@ -8,6 +8,7 @@ import Schedule from "./pages/Schedule";
 import Login from "./pages/Login";
 import WorkOrder from "./pages/WorkOrder";
 import CreateWorkOrder from "./pages/CreateWorkOrder";
+import TimeTracker from "./pages/TimeTracker";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/work-order" element={<WorkOrder />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/work-order/create" element={<CreateWorkOrder />} />
+          <Route path="/time-tracker" element={<TimeTracker />} />
           {/* Redirect root path to login page */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<NotFound />} />
