@@ -5,6 +5,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import JobModal from "@/components/JobModal";
 import Navbar from "@/components/Navbar";
 
@@ -152,18 +153,18 @@ const Schedule = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-secondary">
       <Navbar />
       <div className="container mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold mb-6">Schedule</h1>
+        <h1 className="text-3xl font-medium mb-6 text-gray-800">Schedule</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Calendar Section */}
-          <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-4">
+          <div className="lg:col-span-3 bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <CalendarIcon className="h-5 w-5" />
-                <h2 className="text-xl font-semibold">
+                <CalendarIcon className="h-5 w-5 text-gray-600" />
+                <h2 className="text-xl font-medium text-gray-800">
                   {format(currentDate, 'MMMM yyyy').toUpperCase()}
                 </h2>
               </div>
@@ -172,6 +173,7 @@ const Schedule = () => {
                   variant="outline" 
                   size="icon"
                   onClick={handlePreviousMonth}
+                  className="border-gray-300 text-gray-600"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -179,6 +181,7 @@ const Schedule = () => {
                   variant="outline" 
                   size="icon"
                   onClick={handleNextMonth}
+                  className="border-gray-300 text-gray-600"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -189,7 +192,7 @@ const Schedule = () => {
             <div className="grid grid-cols-7 gap-1">
               {/* Day headers */}
               {['SUN', 'MON', 'TUE', 'WED', 'THR', 'FRI', 'SAT'].map((day) => (
-                <div key={day} className="text-center font-medium py-2 border-b">
+                <div key={day} className="text-center font-medium py-2 border-b text-gray-600 text-sm">
                   {day}
                 </div>
               ))}
@@ -221,22 +224,30 @@ const Schedule = () => {
 
                     <div className="space-y-1 overflow-y-auto max-h-[70px]">
                       {dayJobs.map((job) => (
-                        <div
-                          key={job.id}
-                          className={cn(
-                            "text-xs p-1 rounded truncate cursor-pointer",
-                            job.completed ? "bg-green-100 text-green-800" : 
-                            job.cancelled ? "bg-red-100 text-red-800" : 
-                            job.rescheduled ? "bg-yellow-100 text-yellow-800" :
-                            "bg-blue-100 text-blue-800"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleJobClick(job);
-                          }}
-                        >
-                          {job.name} - {job.startTime}
-                        </div>
+                        <TooltipProvider key={job.id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={cn(
+                                  "text-xs p-1 rounded truncate cursor-pointer",
+                                  job.completed ? "bg-green-100 text-green-800" : 
+                                  job.cancelled ? "bg-red-100 text-red-800" : 
+                                  job.rescheduled ? "bg-yellow-100 text-yellow-800" :
+                                  "bg-blue-100 text-blue-800"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJobClick(job);
+                                }}
+                              >
+                                {job.name} - {job.startTime}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{job.name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ))}
                     </div>
                   </div>
@@ -246,9 +257,9 @@ const Schedule = () => {
           </div>
 
           {/* Filters Section */}
-          <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="mb-4">
-              <h3 className="text-lg font-bold mb-2">SITE MANAGER</h3>
+              <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
               <div className="space-y-2">
                 {uniqueSiteManagers.map((manager) => (
                   <div key={manager} className="flex items-center space-x-2">
@@ -256,8 +267,9 @@ const Schedule = () => {
                       id={`site-manager-${manager}`}
                       checked={filterSiteManagers.includes(manager)}
                       onCheckedChange={() => handleToggleSiteManager(manager)}
+                      className="text-primary focus:ring-primary"
                     />
-                    <label htmlFor={`site-manager-${manager}`} className="text-sm">
+                    <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700">
                       {manager}
                     </label>
                   </div>
@@ -266,16 +278,17 @@ const Schedule = () => {
             </div>
 
             <div>
-              <h3 className="text-lg font-bold mb-2">CREW MEMBERS</h3>
-              <div className="space-y-2">
+              <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
+              <div className="flex flex-wrap gap-3">
                 {uniqueCrewMembers.map((crew) => (
                   <div key={crew} className="flex items-center space-x-2">
                     <Checkbox 
                       id={`crew-${crew}`}
                       checked={filterCrewMembers.includes(crew)}
                       onCheckedChange={() => handleToggleCrewMember(crew)}
+                      className="text-primary focus:ring-primary"
                     />
-                    <label htmlFor={`crew-${crew}`} className="text-sm">
+                    <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700">
                       {crew}
                     </label>
                   </div>

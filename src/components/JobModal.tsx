@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 interface Job {
   id: string;
@@ -113,10 +114,6 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
     }
   };
 
-  const handleCheckboxChange = (name: keyof Job, checked: boolean) => {
-    setFormData({ ...formData, [name]: checked });
-  };
-
   const handleCrewMemberToggle = (crewMember: string) => {
     let updatedCrewMembers: string[];
     
@@ -136,23 +133,23 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-xl font-medium text-gray-800">
             {job ? "Edit Job" : "Create New Job"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Work Order Selection */}
-          <div className="mb-4">
-            <label className="block font-medium mb-1">Work Order No.(s)</label>
+          <div>
+            <label className="block font-medium mb-1 text-gray-700">Work Order No.(s)</label>
             <div className="flex gap-2">
               <select
                 name="workOrderId"
                 value={formData.workOrderId}
                 onChange={handleWorkOrderChange}
-                className="border rounded p-2 w-32"
+                className="border rounded-md p-2 bg-white text-gray-800 w-32 focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 {mockWorkOrders.map(order => (
                   <option key={order} value={order}>{order}</option>
@@ -162,15 +159,15 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
           </div>
 
           {/* Work Order Details */}
-          <div className="mb-6 border rounded-md p-4">
-            <h3 className="font-medium mb-2">Work Order Details (#{formData.workOrderId})</h3>
+          <div className="border rounded-md p-4 bg-gray-50">
+            <h3 className="font-medium mb-4 text-gray-800">Work Order Details (#{formData.workOrderId})</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm mb-1">Client Name</label>
+                <label className="block text-sm mb-1 text-gray-600">Client Name</label>
                 <select
                   value={formData.clientName}
                   onChange={handleClientChange}
-                  className="border rounded p-2 w-full"
+                  className="w-full border rounded-md p-2 bg-white text-gray-800 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   {mockClients.map(client => (
                     <option key={client.name} value={client.name}>{client.name}</option>
@@ -179,22 +176,23 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
               </div>
 
               <div>
-                <label className="block text-sm mb-1">Site Address</label>
+                <label className="block text-sm mb-1 text-gray-600">Site Address</label>
                 <Input 
                   name="siteAddress" 
                   value={formData.siteAddress}
                   onChange={handleChange}
                   readOnly
+                  className="w-full bg-gray-100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm mb-1">Site Manager</label>
+                <label className="block text-sm mb-1 text-gray-600">Site Manager</label>
                 <select
                   name="siteManager"
                   value={formData.siteManager}
                   onChange={handleChange}
-                  className="border rounded p-2 w-full"
+                  className="w-full border rounded-md p-2 bg-white text-gray-800 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   {mockSiteManagers.map(manager => (
                     <option key={manager} value={manager}>{manager}</option>
@@ -203,16 +201,17 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
               </div>
 
               <div>
-                <label className="block text-sm mb-1">Crew Members</label>
-                <div className="flex flex-col gap-2">
+                <label className="block text-sm mb-1 text-gray-600">Crew Members</label>
+                <div className="flex flex-wrap gap-4">
                   {mockCrewMembers.map(crew => (
                     <div key={crew} className="flex items-center">
                       <Checkbox
                         id={`crew-${crew}`}
                         checked={formData.crewMembers.includes(crew)}
                         onCheckedChange={() => handleCrewMemberToggle(crew)}
+                        className="mr-2"
                       />
-                      <label htmlFor={`crew-${crew}`} className="ml-2 text-sm">
+                      <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700">
                         {crew}
                       </label>
                     </div>
@@ -223,126 +222,97 @@ const JobModal = ({ isOpen, onClose, onSave, job, selectedDate }: JobModalProps)
           </div>
 
           {/* Job Details */}
-          <div className="mb-6 border rounded-md p-4">
-            <h3 className="font-medium mb-2">Job Details (#{formData.workOrderId})</h3>
+          <div className="border rounded-md p-4 bg-gray-50">
+            <h3 className="font-medium mb-4 text-gray-800">Job Details (#{formData.workOrderId})</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm mb-1">Name</label>
+                <label className="block text-sm mb-1 text-gray-600">Name</label>
                 <Input 
                   name="name" 
                   value={formData.name} 
                   onChange={handleChange}
                   placeholder="Job Name"
+                  className="w-full"
                 />
               </div>
 
               <div>
-                <label className="block text-sm mb-1">Date</label>
+                <label className="block text-sm mb-1 text-gray-600">Date</label>
                 <Input 
                   type="date" 
                   name="date" 
                   value={formData.date} 
                   onChange={handleChange}
+                  className="w-full"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm mb-1">Description</label>
+                <label className="block text-sm mb-1 text-gray-600">Description</label>
                 <Textarea 
                   name="description" 
                   value={formData.description} 
                   onChange={handleChange}
                   placeholder="Job description..."
                   rows={2}
+                  className="w-full"
                 />
               </div>
 
               <div>
-                <label className="block text-sm mb-1">Start Time</label>
+                <label className="block text-sm mb-1 text-gray-600">Start Time</label>
                 <Input 
                   type="time" 
                   name="startTime" 
                   value={formData.startTime} 
                   onChange={handleChange}
+                  className="w-full"
                 />
               </div>
 
               <div>
-                <label className="block text-sm mb-1">End Time</label>
+                <label className="block text-sm mb-1 text-gray-600">End Time</label>
                 <Input 
                   type="time" 
                   name="endTime" 
                   value={formData.endTime} 
                   onChange={handleChange}
+                  className="w-full"
                 />
               </div>
 
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center">
-                  <Checkbox
-                    id="completed"
-                    checked={formData.completed}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('completed', checked === true)
-                    }
-                  />
-                  <label htmlFor="completed" className="ml-2 text-sm">
-                    Completed
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <Checkbox
-                    id="rescheduled"
-                    checked={formData.rescheduled}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('rescheduled', checked === true)
-                    }
-                  />
-                  <label htmlFor="rescheduled" className="ml-2 text-sm">
-                    Rescheduled
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <Checkbox
-                    id="cancelled"
-                    checked={formData.cancelled}
-                    onCheckedChange={(checked) => 
-                      handleCheckboxChange('cancelled', checked === true)
-                    }
-                  />
-                  <label htmlFor="cancelled" className="ml-2 text-sm">
-                    Cancelled
-                  </label>
-                </div>
-              </div>
+              {/* Removed the Completed, Rescheduled, Cancelled checkboxes as requested */}
             </div>
           </div>
 
           {/* Notes Section */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-1">Notes</label>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Notes</label>
             <Textarea 
               name="notes" 
               value={formData.notes || ""} 
               onChange={handleChange}
               placeholder="Additional notes..."
               rows={3}
+              className="w-full"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
+              className="border-gray-300 text-gray-700"
             >
               <X className="mr-1 h-4 w-4" /> Cancel
             </Button>
-            <Button type="submit">
+            <Button 
+              type="submit" 
+              className="bg-primary hover:bg-primary/90"
+            >
               <Save className="mr-1 h-4 w-4" /> Save
             </Button>
           </div>
