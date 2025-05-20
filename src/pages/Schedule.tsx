@@ -12,7 +12,7 @@ import Navbar from "@/components/Navbar";
 // Job type definition
 interface Job {
   id: string;
-  workOrderId: string;
+  workOrderId: string | string[];
   name: string;
   date: string;
   description: string;
@@ -25,8 +25,18 @@ interface Job {
   completed: boolean;
   rescheduled: boolean;
   cancelled: boolean;
+  status?: string;
   notes?: string;
 }
+
+// Generate mock data for site managers and crew members
+const generateSiteManagers = (count: number) => {
+  return Array.from({ length: count }, (_, i) => `Site Manager ${i + 1}`);
+};
+
+const generateCrewMembers = (count: number) => {
+  return Array.from({ length: count }, (_, i) => `Crew Member ${i + 1}`);
+};
 
 // Mock data for jobs
 const mockJobs: Job[] = [
@@ -40,8 +50,8 @@ const mockJobs: Job[] = [
     endTime: "17:00",
     clientName: "Client A",
     siteAddress: "123 Street Auburn,US,21311",
-    siteManager: "Person A",
-    crewMembers: ["Crew A", "Crew B"],
+    siteManager: "Site Manager 1",
+    crewMembers: ["Crew Member 1", "Crew Member 2"],
     completed: false,
     rescheduled: false,
     cancelled: false
@@ -56,8 +66,8 @@ const mockJobs: Job[] = [
     endTime: "17:00",
     clientName: "Client B",
     siteAddress: "123 Street Auburn,US,21311",
-    siteManager: "Person A",
-    crewMembers: ["Crew A", "Crew B"],
+    siteManager: "Site Manager 2",
+    crewMembers: ["Crew Member 3", "Crew Member 4"],
     completed: false,
     rescheduled: false,
     cancelled: false
@@ -77,9 +87,9 @@ const Schedule = () => {
   const lastDayOfMonth = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
 
-  // Get unique site managers and crew members for filters
-  const uniqueSiteManagers = Array.from(new Set(jobs.map(job => job.siteManager)));
-  const uniqueCrewMembers = Array.from(new Set(jobs.flatMap(job => job.crewMembers)));
+  // Updated: Generate 10 site managers and 20 crew members
+  const siteManagers = generateSiteManagers(10);
+  const crewMembers = generateCrewMembers(20);
 
   const handlePreviousMonth = () => {
     setCurrentDate(subMonths(currentDate, 1));
@@ -139,7 +149,8 @@ const Schedule = () => {
 
   const filteredJobs = jobs.filter(job => {
     // Filter by site manager if any are selected
-    const siteManagerMatch = filterSiteManagers.length === 0 || filterSiteManagers.includes(job.siteManager);
+    const siteManagerMatch = filterSiteManagers.length === 0 || 
+      (typeof job.siteManager === 'string' && filterSiteManagers.includes(job.siteManager));
     
     // Filter by crew member if any are selected
     const crewMemberMatch = filterCrewMembers.length === 0 || 
@@ -225,7 +236,7 @@ const Schedule = () => {
                     <div className="space-y-1 overflow-y-auto max-h-[70px]">
                       {dayJobs.map((job) => (
                         <TooltipProvider key={job.id}>
-                          <Tooltip>
+                          <Tooltip delayDuration={100}>
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
@@ -243,8 +254,10 @@ const Schedule = () => {
                                 {job.name} - {job.startTime}
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{job.name}</p>
+                            <TooltipContent className="bg-white p-2 shadow-md border rounded-md z-50">
+                              <p className="font-medium">{job.name}</p>
+                              <p className="text-xs text-gray-600">{job.clientName}</p>
+                              <p className="text-xs text-gray-600">{job.description}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -258,10 +271,10 @@ const Schedule = () => {
 
           {/* Filters Section */}
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="mb-4">
+            <div className="mb-6">
               <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
-              <div className="space-y-2">
-                {uniqueSiteManagers.map((manager) => (
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {siteManagers.map((manager) => (
                   <div key={manager} className="flex items-center space-x-2">
                     <Checkbox 
                       id={`site-manager-${manager}`}
@@ -279,8 +292,8 @@ const Schedule = () => {
 
             <div>
               <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
-              <div className="flex flex-wrap gap-3">
-                {uniqueCrewMembers.map((crew) => (
+              <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-2">
+                {crewMembers.map((crew) => (
                   <div key={crew} className="flex items-center space-x-2">
                     <Checkbox 
                       id={`crew-${crew}`}
@@ -288,7 +301,7 @@ const Schedule = () => {
                       onCheckedChange={() => handleToggleCrewMember(crew)}
                       className="text-primary focus:ring-primary"
                     />
-                    <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700">
+                    <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 truncate">
                       {crew}
                     </label>
                   </div>

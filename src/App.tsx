@@ -20,8 +20,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/schedule" element={<Schedule />} />
           <Route path="/work-order" element={<WorkOrder />} />
+          <Route path="/schedule" element={<Schedule />} />
           <Route path="/work-order/create" element={<CreateWorkOrder />} />
           {/* Redirect root path to login page */}
           <Route path="/" element={<Navigate to="/login" replace />} />
