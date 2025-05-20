@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Plus, X } from "lucide-react";
+import AnnotatedPhotoUpload from "@/components/AnnotatedPhotoUpload";
 import Navbar from "@/components/Navbar";
 
 interface WorkOrderItem {
@@ -373,27 +373,12 @@ const CreateWorkOrder = () => {
             </div>
           </div>
 
-          {/* Upload Sections */}
+          {/* Update Photo Upload Section to use the AnnotatedPhotoUpload component */}
           <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">Upload Photos</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div 
-                  key={i} 
-                  className="h-32 bg-gray-100 rounded flex items-center justify-center border"
-                >
-                  <span className="text-gray-400">IMG</span>
-                </div>
-              ))}
-            </div>
-            <Button 
-              variant="outline" 
-              className="flex items-center text-gray-600 border-gray-300"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Upload
-            </Button>
+            <AnnotatedPhotoUpload />
           </div>
 
+          {/* Upload W9 Section */}
           <div className="mb-8">
             <h3 className="text-lg font-medium text-gray-800 mb-4">Upload W9</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

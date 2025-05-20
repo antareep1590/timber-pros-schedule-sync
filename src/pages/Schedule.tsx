@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
@@ -6,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import JobModal from "@/components/JobModal";
 import Navbar from "@/components/Navbar";
 
@@ -87,9 +87,9 @@ const Schedule = () => {
   const lastDayOfMonth = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
 
-  // Updated: Generate 10 site managers and 20 crew members
+  // Updated: Generate 10 site managers and 10 crew members
   const siteManagers = generateSiteManagers(10);
-  const crewMembers = generateCrewMembers(20);
+  const crewMembers = generateCrewMembers(10);
 
   const handlePreviousMonth = () => {
     setCurrentDate(subMonths(currentDate, 1));
@@ -271,38 +271,46 @@ const Schedule = () => {
 
           {/* Filters Section */}
           <div className="bg-white rounded-lg shadow-sm p-4">
+            {/* Site Managers Section */}
             <div className="mb-6">
               <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {siteManagers.map((manager) => (
-                  <div key={manager} className="flex items-center space-x-2">
+                  <div key={manager} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
                     <Checkbox 
                       id={`site-manager-${manager}`}
                       checked={filterSiteManagers.includes(manager)}
                       onCheckedChange={() => handleToggleSiteManager(manager)}
                       className="text-primary focus:ring-primary"
                     />
-                    <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700">
-                      {manager}
+                    <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                      <span>{manager}</span>
+                      {filterSiteManagers.includes(manager) && (
+                        <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                      )}
                     </label>
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Crew Members Section - Styled to match Site Managers */}
             <div>
               <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
-              <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {crewMembers.map((crew) => (
-                  <div key={crew} className="flex items-center space-x-2">
+                  <div key={crew} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
                     <Checkbox 
                       id={`crew-${crew}`}
                       checked={filterCrewMembers.includes(crew)}
                       onCheckedChange={() => handleToggleCrewMember(crew)}
                       className="text-primary focus:ring-primary"
                     />
-                    <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 truncate">
-                      {crew}
+                    <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                      <span>{crew}</span>
+                      {filterCrewMembers.includes(crew) && (
+                        <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                      )}
                     </label>
                   </div>
                 ))}
