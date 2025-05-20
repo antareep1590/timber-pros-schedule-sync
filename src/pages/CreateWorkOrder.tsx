@@ -12,6 +12,7 @@ interface WorkOrderItem {
   units: number;
   rate: number;
   cost: number;
+  [key: string]: string | number; // Add index signature to allow dynamic property access
 }
 
 interface WorkOrderExpense {
@@ -19,6 +20,7 @@ interface WorkOrderExpense {
   hours: number;
   rate: number;
   amount: number;
+  [key: string]: string | number; // Add index signature to allow dynamic property access
 }
 
 const CreateWorkOrder = () => {
@@ -49,7 +51,7 @@ const CreateWorkOrder = () => {
     setItems([...items, { name: "", units: 1, rate: 0, cost: 0 }]);
   };
 
-  const handleItemChange = (index: number, field: keyof WorkOrderItem, value: any) => {
+  const handleItemChange = (index: number, field: keyof WorkOrderItem, value: string | number) => {
     const updatedItems = [...items];
     updatedItems[index][field] = value;
     
@@ -71,7 +73,7 @@ const CreateWorkOrder = () => {
     setExpenses([...expenses, { head: "", hours: 0, rate: 0, amount: 0 }]);
   };
 
-  const handleExpenseChange = (index: number, field: keyof WorkOrderExpense, value: any) => {
+  const handleExpenseChange = (index: number, field: keyof WorkOrderExpense, value: string | number) => {
     const updatedExpenses = [...expenses];
     updatedExpenses[index][field] = value;
     
