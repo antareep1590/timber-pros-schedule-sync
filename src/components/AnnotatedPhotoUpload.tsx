@@ -1,11 +1,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Circle, Check, CircleX, Pencil, Plus, Undo2, Trash2 } from "lucide-react";
+import { Circle, Check, Pencil, Plus, Undo2, Trash2, Save } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface AnnotationType {
   id: string;
@@ -107,6 +108,7 @@ const AnnotatedPhotoUpload = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [annotationPosition, setAnnotationPosition] = useState({ x: 0, y: 0 });
+  const { toast } = useToast();
 
   // Effect to render annotations whenever the selectedPhoto changes or annotations are added/removed
   useEffect(() => {
@@ -292,6 +294,17 @@ const AnnotatedPhotoUpload = () => {
     }
   };
 
+  // New function to save all annotations
+  const saveAllAnnotations = () => {
+    // In a real app, this would persist to a database
+    // For now we'll just show a toast confirmation
+    toast({
+      title: "Success",
+      description: "Annotations saved successfully.",
+      duration: 3000,
+    });
+  };
+
   const renderAnnotations = () => {
     if (!canvasRef.current || !selectedPhoto || !imageRef.current) return;
     
@@ -313,9 +326,9 @@ const AnnotatedPhotoUpload = () => {
       const isHovered = hoveredAnnotation === ann.id;
       drawAnnotation(ctx, ann, isHovered);
       
-      // Draw annotation note tooltip when hovered
-      if (isHovered && ann.note) {
-        drawAnnotationTooltip(ctx, ann);
+      // Always show notes directly on the image
+      if (ann.note) {
+        drawAnnotationNote(ctx, ann);
       }
     });
     
@@ -350,6 +363,86 @@ const AnnotatedPhotoUpload = () => {
     }
     
     ctx.stroke();
+  };
+
+  // Updated function to show notes directly on canvas
+  const drawAnnotationNote = (ctx: CanvasRenderingContext2D, ann: AnnotationType) => {
+    if (!ann.note) return;
+    
+    // Calculate note position
+    let x, y;
+    if (ann.type.includes('circle')) {
+      x = ann.x + 20;
+      y = ann.y - 20;
+    } else if (ann.points && ann.points.length > 1) {
+      // For lines, put note at midpoint
+      x = (ann.points[0].x + ann.points[1].x) / 2 + 10;
+      y = (ann.points[0].y + ann.points[1].y) / 2 - 10;
+    } else {
+      return;
+    }
+    
+    // Determine background color based on annotation type
+    let bgColor;
+    if (ann.type === 'green-circle') bgColor = 'rgba(34, 197, 94, 0.9)';
+    else if (ann.type === 'red-circle') bgColor = 'rgba(239, 68, 68, 0.9)';
+    else if (ann.type === 'blue-circle') bgColor = 'rgba(59, 130, 246, 0.9)';
+    else if (ann.type === 'yellow-line') bgColor = 'rgba(234, 179, 8, 0.9)';
+    else if (ann.type === 'pink-line') bgColor = 'rgba(236, 72, 153, 0.9)';
+    
+    // Determine the text color (white for most colors, black for yellow)
+    const textColor = ann.type === 'yellow-line' ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+    
+    // Draw note tag
+    ctx.fillStyle = bgColor;
+    
+    const noteText = ann.note || "";
+    const noteWidth = Math.min(ctx.measureText(noteText).width + 10, 150);
+    const noteHeight = 20;
+    
+    // Draw rounded rectangle
+    ctx.beginPath();
+    ctx.roundRect(x, y, noteWidth, noteHeight, 4);
+    ctx.fill();
+    
+    // Draw note text
+    ctx.fillStyle = textColor;
+    ctx.font = '11px sans-serif';
+    ctx.fillText(noteText.length > 20 ? noteText.substring(0, 20) + '...' : noteText, x + 4, y + 14);
+    
+    // If hovered and text is longer than what's shown
+    if (hoveredAnnotation === ann.id && noteText.length > 20) {
+      // Draw expanded tooltip
+      const expandedHeight = 40;
+      const expandedWidth = Math.min(ctx.measureText(noteText).width + 20, 200);
+      
+      ctx.fillStyle = bgColor;
+      ctx.beginPath();
+      ctx.roundRect(x, y - 20, expandedWidth, expandedHeight, 4);
+      ctx.fill();
+      
+      // Draw wrapped text
+      ctx.fillStyle = textColor;
+      ctx.font = '11px sans-serif';
+      
+      const words = noteText.split(' ');
+      let line = '';
+      let lineY = y - 5;
+      
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' ';
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > expandedWidth - 20 && i > 0) {
+          ctx.fillText(line, x + 4, lineY);
+          line = words[i] + ' ';
+          lineY += 15;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x + 4, lineY);
+    }
   };
 
   const drawAnnotationTooltip = (ctx: CanvasRenderingContext2D, ann: AnnotationType) => {
@@ -457,6 +550,16 @@ const AnnotatedPhotoUpload = () => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">Annotate Photo</h3>
             <div className="flex gap-2">
+              {selectedPhoto && (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  onClick={saveAllAnnotations}
+                  className="flex items-center bg-primary text-white"
+                >
+                  <Save className="h-4 w-4 mr-1" /> Save Annotations
+                </Button>
+              )}
               {selectedPhoto && selectedPhoto.annotations.length > 0 && (
                 <Button 
                   variant="outline" 
@@ -585,6 +688,7 @@ const AnnotatedPhotoUpload = () => {
                     <li>Click and drag to draw a line</li>
                     <li>Add an optional note to explain the annotation</li>
                     <li>Hover over annotations to see details</li>
+                    <li>Click Save when finished</li>
                   </ul>
                 </div>
               </div>

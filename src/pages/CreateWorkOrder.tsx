@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Plus, X } from "lucide-react";
 import AnnotatedPhotoUpload from "@/components/AnnotatedPhotoUpload";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "@/components/ui/toaster";
 
 interface WorkOrderItem {
   name: string;
@@ -412,6 +413,7 @@ const CreateWorkOrder = () => {
           </div>
         </div>
       </div>
+      <Toaster />
     </div>
   );
 };
