@@ -1,14 +1,16 @@
+
 import { useState, useEffect } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import JobModal from "@/components/JobModal";
 import Navbar from "@/components/Navbar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Job type definition
 interface Job {
@@ -39,46 +41,98 @@ const generateCrewMembers = (count: number) => {
   return Array.from({ length: count }, (_, i) => `Crew Member ${i + 1}`);
 };
 
-// Mock data for jobs
-const mockJobs: Job[] = [
-  {
-    id: "1",
-    workOrderId: "12",
-    name: "Tree Removal",
-    date: "2025-05-02",
-    description: "Remove large oak tree from front yard",
-    startTime: "10:00",
-    endTime: "17:00",
-    clientName: "Client A",
-    siteAddress: "123 Street Auburn,US,21311",
-    siteManager: "Site Manager 1",
-    crewMembers: ["Crew Member 1", "Crew Member 2"],
-    completed: false,
-    rescheduled: false,
-    cancelled: false
-  },
-  {
-    id: "2",
-    workOrderId: "15",
-    name: "Stump Grinding",
-    date: "2025-05-04",
-    description: "Grind stumps in backyard",
-    startTime: "10:00",
-    endTime: "17:00",
-    clientName: "Client B",
-    siteAddress: "123 Street Auburn,US,21311",
-    siteManager: "Site Manager 2",
-    crewMembers: ["Crew Member 3", "Crew Member 4"],
-    completed: false,
-    rescheduled: false,
-    cancelled: false
-  }
-];
+// Generate more comprehensive mock job data
+const generateMockJobs = () => {
+  const mockJobs: Job[] = [
+    {
+      id: "1",
+      workOrderId: "12",
+      name: "Tree Removal",
+      date: "2025-05-02",
+      description: "Remove large oak tree from front yard",
+      startTime: "10:00",
+      endTime: "17:00",
+      clientName: "Client A",
+      siteAddress: "123 Street Auburn,US,21311",
+      siteManager: "Site Manager 1",
+      crewMembers: ["Crew Member 1", "Crew Member 2"],
+      completed: false,
+      rescheduled: false,
+      cancelled: false
+    },
+    {
+      id: "2",
+      workOrderId: "15",
+      name: "Stump Grinding",
+      date: "2025-05-04",
+      description: "Grind stumps in backyard",
+      startTime: "10:00",
+      endTime: "17:00",
+      clientName: "Client B",
+      siteAddress: "456 Avenue Auburn,US,21311",
+      siteManager: "Site Manager 2",
+      crewMembers: ["Crew Member 3", "Crew Member 4"],
+      completed: false,
+      rescheduled: false,
+      cancelled: false
+    },
+    {
+      id: "3",
+      workOrderId: "18",
+      name: "Lawn Mowing",
+      date: "2025-05-10",
+      description: "Regular lawn maintenance",
+      startTime: "09:00",
+      endTime: "12:00",
+      clientName: "Client C",
+      siteAddress: "789 Boulevard Auburn,US,21311",
+      siteManager: "Site Manager 1",
+      crewMembers: ["Crew Member 1", "Crew Member 5"],
+      completed: true,
+      rescheduled: false,
+      cancelled: false
+    },
+    {
+      id: "4",
+      workOrderId: "22",
+      name: "Hedge Trimming",
+      date: "2025-05-15",
+      description: "Trim hedges and shape bushes",
+      startTime: "13:00",
+      endTime: "16:00",
+      clientName: "Client D",
+      siteAddress: "101 Circle Auburn,US,21311",
+      siteManager: "Site Manager 3",
+      crewMembers: ["Crew Member 2", "Crew Member 3"],
+      completed: false,
+      rescheduled: true,
+      cancelled: false
+    },
+    {
+      id: "5",
+      workOrderId: "25",
+      name: "Garden Planting",
+      date: "2025-05-20",
+      description: "Plant seasonal flowers and shrubs",
+      startTime: "08:00",
+      endTime: "15:00",
+      clientName: "Client E",
+      siteAddress: "202 Drive Auburn,US,21311",
+      siteManager: "Site Manager 2",
+      crewMembers: ["Crew Member 4", "Crew Member 5"],
+      completed: false,
+      rescheduled: false,
+      cancelled: false
+    }
+  ];
+  
+  return mockJobs;
+};
 
 const Schedule = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [jobs, setJobs] = useState<Job[]>(mockJobs);
+  const [jobs, setJobs] = useState<Job[]>(generateMockJobs());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [filterSiteManagers, setFilterSiteManagers] = useState<string[]>([]);
@@ -86,7 +140,7 @@ const Schedule = () => {
   const [userRole, setUserRole] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
 
-  // Add new state for collapsible panel
+  // Add state for collapsible panel with default closed for crew
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
 
   useEffect(() => {
@@ -95,13 +149,18 @@ const Schedule = () => {
     const name = localStorage.getItem("userName") || "";
     setUserRole(role);
     setUserName(name);
+    
+    // Set filter panel closed by default for crew members
+    if (role === "crew") {
+      setIsFilterPanelOpen(false);
+    }
   }, []);
 
   const firstDayOfMonth = startOfMonth(currentDate);
   const lastDayOfMonth = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
 
-  // Updated: Generate 10 site managers and 10 crew members
+  // Generate 10 site managers and 10 crew members
   const siteManagers = generateSiteManagers(10);
   const crewMembers = generateCrewMembers(10);
 
@@ -207,191 +266,202 @@ const Schedule = () => {
     return getFilteredJobs().filter(job => isSameDay(parseISO(job.date), date));
   };
 
+  // Get the card title based on user role
+  const getCardTitle = () => {
+    if (userRole === "crew" || userRole === "site-manager") {
+      return "Active Jobs";
+    } else {
+      return "Jobs This Week";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-secondary">
-      <Navbar />
-      <div className="container mx-auto py-8 px-4">
-        <h1 className="text-3xl font-medium mb-6 text-gray-800">Schedule</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Calendar Section - Adjusted grid span */}
-          <div className={`${userRole === "crew" || !isFilterPanelOpen ? "lg:col-span-4" : "lg:col-span-3"} bg-white rounded-lg shadow-sm p-4`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <CalendarIcon className="h-5 w-5 text-gray-600" />
-                <h2 className="text-xl font-medium text-gray-800">
-                  {format(currentDate, 'MMMM yyyy').toUpperCase()}
-                </h2>
+    <TooltipProvider>
+      <div className="min-h-screen bg-secondary">
+        <Navbar />
+        <div className="container mx-auto py-8 px-4">
+          <h1 className="text-3xl font-medium mb-6 text-gray-800">Schedule</h1>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Calendar Section */}
+            <div className={`${userRole === "crew" || !isFilterPanelOpen ? "lg:col-span-4" : "lg:col-span-3"} bg-white rounded-lg shadow-sm p-4`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <CalendarIcon className="h-5 w-5 text-gray-600" />
+                  <h2 className="text-xl font-medium text-gray-800">
+                    {format(currentDate, 'MMMM yyyy').toUpperCase()}
+                  </h2>
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handlePreviousMonth}
+                    className="border-gray-300 text-gray-600"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleNextMonth}
+                    className="border-gray-300 text-gray-600"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={handlePreviousMonth}
-                  className="border-gray-300 text-gray-600"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={handleNextMonth}
-                  className="border-gray-300 text-gray-600"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {/* Day headers */}
+                {['SUN', 'MON', 'TUE', 'WED', 'THR', 'FRI', 'SAT'].map((day) => (
+                  <div key={day} className="text-center font-medium py-2 border-b text-gray-600 text-sm">
+                    {day}
+                  </div>
+                ))}
+
+                {/* Days */}
+                {daysInMonth.map((day, index) => {
+                  const dayJobs = getJobsForDate(day);
+                  
+                  return (
+                    <div 
+                      key={index}
+                      className={cn(
+                        "min-h-[100px] border p-1",
+                        isSameMonth(day, currentDate) ? "bg-white" : "bg-gray-50",
+                        isSameDay(day, new Date()) ? "border-primary" : "border-gray-200",
+                        userRole !== "crew" ? "cursor-pointer" : ""
+                      )}
+                      onClick={() => handleDateClick(day)}
+                    >
+                      <div className="text-right mb-1">
+                        <span 
+                          className={cn(
+                            "inline-block w-6 h-6 rounded-full text-sm flex items-center justify-center",
+                            isSameDay(day, new Date()) ? "bg-primary text-white" : "text-gray-700"
+                          )}
+                        >
+                          {format(day, 'd')}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 overflow-y-auto max-h-[70px]">
+                        {dayJobs.map((job) => (
+                          <Tooltip key={job.id}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={cn(
+                                  "text-xs p-1 rounded truncate cursor-pointer",
+                                  job.completed ? "bg-green-100 text-green-800" : 
+                                  job.cancelled ? "bg-red-100 text-red-800" : 
+                                  job.rescheduled ? "bg-yellow-100 text-yellow-800" :
+                                  "bg-blue-100 text-blue-800"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJobClick(job);
+                                }}
+                              >
+                                {job.name} - {job.startTime}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-white p-2 shadow-md border rounded-md z-50">
+                              <p className="font-medium">{job.name}</p>
+                              <p className="text-xs text-gray-600">{job.clientName}</p>
+                              <p className="text-xs text-gray-600">{job.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {/* Day headers */}
-              {['SUN', 'MON', 'TUE', 'WED', 'THR', 'FRI', 'SAT'].map((day) => (
-                <div key={day} className="text-center font-medium py-2 border-b text-gray-600 text-sm">
-                  {day}
+            {/* Filters Section - Collapsible for all roles except crew */}
+            {userRole !== "crew" && (
+              <Collapsible 
+                open={isFilterPanelOpen} 
+                onOpenChange={setIsFilterPanelOpen}
+                className="bg-white rounded-lg shadow-sm overflow-hidden"
+              >
+                <div className="p-4 border-b flex items-center justify-between">
+                  <h3 className="font-medium text-gray-700">{getCardTitle()}</h3>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                      <ChevronRightIcon className={`h-4 w-4 transition-transform duration-200 ${isFilterPanelOpen ? 'rotate-90' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
                 </div>
-              ))}
-
-              {/* Days */}
-              {daysInMonth.map((day, index) => {
-                const dayJobs = getJobsForDate(day);
                 
-                return (
-                  <div 
-                    key={index}
-                    className={cn(
-                      "min-h-[100px] border p-1",
-                      isSameMonth(day, currentDate) ? "bg-white" : "bg-gray-50",
-                      isSameDay(day, new Date()) ? "border-primary" : "border-gray-200",
-                      userRole !== "crew" ? "cursor-pointer" : ""
-                    )}
-                    onClick={() => handleDateClick(day)}
-                  >
-                    <div className="text-right mb-1">
-                      <span 
-                        className={cn(
-                          "inline-block w-6 h-6 rounded-full text-sm flex items-center justify-center",
-                          isSameDay(day, new Date()) ? "bg-primary text-white" : "text-gray-700"
-                        )}
-                      >
-                        {format(day, 'd')}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 overflow-y-auto max-h-[70px]">
-                      {dayJobs.map((job) => (
-                        <Tooltip key={job.id}>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={cn(
-                                "text-xs p-1 rounded truncate cursor-pointer",
-                                job.completed ? "bg-green-100 text-green-800" : 
-                                job.cancelled ? "bg-red-100 text-red-800" : 
-                                job.rescheduled ? "bg-yellow-100 text-yellow-800" :
-                                "bg-blue-100 text-blue-800"
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleJobClick(job);
-                              }}
-                            >
-                              {job.name} - {job.startTime}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-white p-2 shadow-md border rounded-md z-50">
-                            <p className="font-medium">{job.name}</p>
-                            <p className="text-xs text-gray-600">{job.clientName}</p>
-                            <p className="text-xs text-gray-600">{job.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                <CollapsibleContent className="p-4">
+                  {/* Site Managers Section */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                      {siteManagers.map((manager) => (
+                        <div key={manager} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
+                          <Checkbox 
+                            id={`site-manager-${manager}`}
+                            checked={filterSiteManagers.includes(manager)}
+                            onCheckedChange={() => handleToggleSiteManager(manager)}
+                            className="text-primary focus:ring-primary"
+                          />
+                          <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                            <span>{manager}</span>
+                            {filterSiteManagers.includes(manager) && (
+                              <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                            )}
+                          </label>
+                        </div>
                       ))}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Crew Members Section */}
+                  <div>
+                    <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                      {crewMembers.map((crew) => (
+                        <div key={crew} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
+                          <Checkbox 
+                            id={`crew-${crew}`}
+                            checked={filterCrewMembers.includes(crew)}
+                            onCheckedChange={() => handleToggleCrewMember(crew)}
+                            className="text-primary focus:ring-primary"
+                          />
+                          <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                            <span>{crew}</span>
+                            {filterCrewMembers.includes(crew) && (
+                              <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                            )}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
-
-          {/* Filters Section - Now Collapsible - Only for Admin and Site Manager */}
-          {userRole !== "crew" && (
-            <Collapsible 
-              open={isFilterPanelOpen} 
-              onOpenChange={setIsFilterPanelOpen}
-              className="bg-white rounded-lg shadow-sm overflow-hidden"
-            >
-              <div className="p-4 border-b flex items-center justify-between">
-                <h3 className="font-medium text-gray-700">Filters</h3>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-9 p-0">
-                    <ChevronRightIcon className={`h-4 w-4 transition-transform duration-200 ${isFilterPanelOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-              
-              <CollapsibleContent className="p-4">
-                {/* Site Managers Section */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {siteManagers.map((manager) => (
-                      <div key={manager} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
-                        <Checkbox 
-                          id={`site-manager-${manager}`}
-                          checked={filterSiteManagers.includes(manager)}
-                          onCheckedChange={() => handleToggleSiteManager(manager)}
-                          className="text-primary focus:ring-primary"
-                        />
-                        <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
-                          <span>{manager}</span>
-                          {filterSiteManagers.includes(manager) && (
-                            <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
-                          )}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Crew Members Section */}
-                <div>
-                  <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {crewMembers.map((crew) => (
-                      <div key={crew} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
-                        <Checkbox 
-                          id={`crew-${crew}`}
-                          checked={filterCrewMembers.includes(crew)}
-                          onCheckedChange={() => handleToggleCrewMember(crew)}
-                          className="text-primary focus:ring-primary"
-                        />
-                        <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
-                          <span>{crew}</span>
-                          {filterCrewMembers.includes(crew) && (
-                            <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
-                          )}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
         </div>
+        
+        {/* Job Modal - disabled editing for crew members */}
+        {isModalOpen && (
+          <JobModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onSave={handleSaveJob}
+            job={selectedJob}
+            selectedDate={selectedDate}
+            readOnly={userRole === "crew"}
+          />
+        )}
       </div>
-      
-      {/* Job Modal - disabled editing for crew members */}
-      {isModalOpen && (
-        <JobModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onSave={handleSaveJob}
-          job={selectedJob}
-          selectedDate={selectedDate}
-          readOnly={userRole === "crew"}
-        />
-      )}
-    </div>
+    </TooltipProvider>
   );
 };
 
