@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -277,11 +276,11 @@ const TimeTracker = () => {
   // Determine which card to show based on user role
   const renderCustomCard = () => {
     if (userRole === "site-manager") {
-      // For Site Manager: Active Work Orders card
+      // For Site Manager: Active Jobs card (previously "Jobs Assigned This Week")
       return (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-500">Jobs Assigned This Week</CardTitle>
+            <CardTitle className="text-sm text-gray-500">Active Jobs</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">4</p>
@@ -289,11 +288,11 @@ const TimeTracker = () => {
         </Card>
       );
     } else if (userRole === "crew") {
-      // For Crew: Jobs Today card
+      // For Crew: Active Jobs card (previously "Jobs Today")
       return (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-gray-500">Jobs Today</CardTitle>
+            <CardTitle className="text-sm text-gray-500">Active Jobs</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold">1</p>
