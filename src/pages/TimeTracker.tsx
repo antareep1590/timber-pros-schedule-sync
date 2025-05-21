@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 import { 
   Table, 
   TableBody, 
@@ -14,7 +14,25 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { ClockIcon } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue, 
+} from "@/components/ui/select";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { 
+  CalendarIcon, 
+  ClockIcon, 
+  SearchIcon, 
+  FilterIcon 
+} from "lucide-react";
 
 interface TimeLogEntry {
   id: string;
@@ -83,6 +101,11 @@ const TimeTracker = () => {
   const [clockedIn, setClockedIn] = useState<boolean>(false);
   const [clockInTime, setClockInTime] = useState<string | null>(null);
   const [timeLogs, setTimeLogs] = useState<TimeLogEntry[]>([]);
+  
+  // New filter states
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [roleFilter, setRoleFilter] = useState<string>("");
+  const [searchName, setSearchName] = useState<string>("");
   
   useEffect(() => {
     // Get user role and name from localStorage
@@ -219,14 +242,83 @@ const TimeTracker = () => {
     return `${String(avgHours).padStart(2, '0')}:${String(avgMins).padStart(2, '0')}`;
   };
   
-  // Filter logs based on user role
+  // Enhanced filter function
   const getFilteredLogs = () => {
-    if (userRole === "admin") {
-      // Admin sees all logs
-      return timeLogs;
-    } else {
+    let filteredResults = timeLogs;
+    
+    // Base role filtering
+    if (userRole !== "admin") {
       // Site Manager and Crew Member only see their own logs
-      return timeLogs.filter(log => log.name === userName);
+      filteredResults = filteredResults.filter(log => log.name === userName);
+    }
+    
+    // Additional filters
+    if (date) {
+      const selectedDate = format(date, 'yyyy-MM-dd');
+      filteredResults = filteredResults.filter(log => log.date === selectedDate);
+    }
+    
+    if (roleFilter) {
+      filteredResults = filteredResults.filter(log => 
+        log.role.toLowerCase() === roleFilter.toLowerCase()
+      );
+    }
+    
+    if (searchName) {
+      filteredResults = filteredResults.filter(log => 
+        log.name.toLowerCase().includes(searchName.toLowerCase())
+      );
+    }
+    
+    return filteredResults;
+  };
+  
+  // Determine which card to show based on user role
+  const renderCustomCard = () => {
+    if (userRole === "site-manager") {
+      // For Site Manager: Active Work Orders card
+      return (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-gray-500">Jobs Assigned This Week</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">4</p>
+          </CardContent>
+        </Card>
+      );
+    } else if (userRole === "crew") {
+      // For Crew: Jobs Today card
+      return (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-gray-500">Jobs Today</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">1</p>
+          </CardContent>
+        </Card>
+      );
+    } else {
+      // For Admin (default): Use the original card
+      return (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-gray-500">Assigned Days</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-1">
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">M</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">T</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">W</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">T</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">F</Badge>
+              <Badge variant="secondary" className="bg-gray-100 text-gray-800">S</Badge>
+              <Badge variant="secondary" className="bg-gray-100 text-gray-800">S</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      );
     }
   };
   
@@ -234,12 +326,12 @@ const TimeTracker = () => {
   const renderTableHeaders = () => {
     return (
       <TableRow>
-        <TableHead>Date</TableHead>
-        {userRole === "admin" && <TableHead>Name</TableHead>}
-        {userRole === "admin" && <TableHead>Role</TableHead>}
-        <TableHead>Clock-In Time</TableHead>
-        <TableHead>Clock-Out Time</TableHead>
-        <TableHead>Total Hours</TableHead>
+        <TableHead className="w-[120px] font-semibold">Date</TableHead>
+        {userRole === "admin" && <TableHead className="font-semibold">Name</TableHead>}
+        {userRole === "admin" && <TableHead className="font-semibold">Role</TableHead>}
+        <TableHead className="font-semibold">Clock-In Time</TableHead>
+        <TableHead className="font-semibold">Clock-Out Time</TableHead>
+        <TableHead className="font-semibold">Total Hours</TableHead>
       </TableRow>
     );
   };
@@ -248,13 +340,40 @@ const TimeTracker = () => {
     const filteredLogs = getFilteredLogs();
     
     return filteredLogs.map(log => (
-      <TableRow key={log.id}>
-        <TableCell>{format(parseISO(log.date), 'MMM dd, yyyy')}</TableCell>
+      <TableRow key={log.id} className="hover:bg-gray-50">
+        <TableCell className="font-medium">
+          {format(parseISO(log.date), 'MMM dd, yyyy')}
+        </TableCell>
+        
         {userRole === "admin" && <TableCell>{log.name}</TableCell>}
-        {userRole === "admin" && <TableCell>{log.role}</TableCell>}
-        <TableCell>{log.clockInTime}</TableCell>
-        <TableCell>{log.clockOutTime || "--"}</TableCell>
-        <TableCell>{log.totalHours || "--"}</TableCell>
+        
+        {userRole === "admin" && (
+          <TableCell>
+            <Badge variant="outline" className={`
+              ${log.role === "Site Manager" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}
+            `}>
+              {log.role}
+            </Badge>
+          </TableCell>
+        )}
+        
+        <TableCell>
+          <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-800 font-medium">
+            {log.clockInTime}
+          </span>
+        </TableCell>
+        
+        <TableCell>
+          {log.clockOutTime ? (
+            <span className="px-2 py-1 rounded-md bg-purple-100 text-purple-800 font-medium">
+              {log.clockOutTime}
+            </span>
+          ) : "--"}
+        </TableCell>
+        
+        <TableCell className="font-semibold">
+          {log.totalHours || "--"}
+        </TableCell>
       </TableRow>
     ));
   };
@@ -298,22 +417,7 @@ const TimeTracker = () => {
           <div className="mb-6">
             <h2 className="text-xl font-medium text-gray-700 mb-4">My Stats</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-gray-500">Assigned Days</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-1">
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">M</Badge>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">T</Badge>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">W</Badge>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">T</Badge>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">F</Badge>
-                    <Badge variant="secondary" className="bg-gray-100 text-gray-800">S</Badge>
-                    <Badge variant="secondary" className="bg-gray-100 text-gray-800">S</Badge>
-                  </div>
-                </CardContent>
-              </Card>
+              {renderCustomCard()}
               
               <Card>
                 <CardHeader className="pb-2">
@@ -335,6 +439,83 @@ const TimeTracker = () => {
             </div>
           </div>
         )}
+        
+        {/* Filters */}
+        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Date Filter */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            {/* Role Filter - Admin only */}
+            {userRole === "admin" && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Role</label>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Roles</SelectItem>
+                    <SelectItem value="Site Manager">Site Manager</SelectItem>
+                    <SelectItem value="Crew Member">Crew Member</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {/* Name Search - Admin only */}
+            {userRole === "admin" && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Search by Name</label>
+                <div className="relative">
+                  <Input
+                    placeholder="Search name..."
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                    className="pr-8"
+                  />
+                  <SearchIcon className="absolute right-2 top-2.5 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+            )}
+            
+            {/* Clear Filters */}
+            <div className="flex items-end">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  setDate(undefined);
+                  setRoleFilter("");
+                  setSearchName("");
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+        </div>
         
         {/* Attendance Log Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-x-auto">

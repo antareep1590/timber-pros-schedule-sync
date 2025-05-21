@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import JobModal from "@/components/JobModal";
 import Navbar from "@/components/Navbar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Job type definition
 interface Job {
@@ -84,6 +85,9 @@ const Schedule = () => {
   const [filterCrewMembers, setFilterCrewMembers] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+
+  // Add new state for collapsible panel
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
 
   useEffect(() => {
     // Get user role from localStorage
@@ -210,8 +214,8 @@ const Schedule = () => {
         <h1 className="text-3xl font-medium mb-6 text-gray-800">Schedule</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Calendar Section */}
-          <div className={`${userRole === "crew" ? "lg:col-span-4" : "lg:col-span-3"} bg-white rounded-lg shadow-sm p-4`}>
+          {/* Calendar Section - Adjusted grid span */}
+          <div className={`${userRole === "crew" || !isFilterPanelOpen ? "lg:col-span-4" : "lg:col-span-3"} bg-white rounded-lg shadow-sm p-4`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <CalendarIcon className="h-5 w-5 text-gray-600" />
@@ -310,55 +314,70 @@ const Schedule = () => {
             </div>
           </div>
 
-          {/* Filters Section - only visible for Admin and Site Manager */}
+          {/* Filters Section - Now Collapsible - Only for Admin and Site Manager */}
           {userRole !== "crew" && (
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              {/* Site Managers Section */}
-              <div className="mb-6">
-                <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                  {siteManagers.map((manager) => (
-                    <div key={manager} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
-                      <Checkbox 
-                        id={`site-manager-${manager}`}
-                        checked={filterSiteManagers.includes(manager)}
-                        onCheckedChange={() => handleToggleSiteManager(manager)}
-                        className="text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
-                        <span>{manager}</span>
-                        {filterSiteManagers.includes(manager) && (
-                          <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
-                        )}
-                      </label>
-                    </div>
-                  ))}
-                </div>
+            <Collapsible 
+              open={isFilterPanelOpen} 
+              onOpenChange={setIsFilterPanelOpen}
+              className="bg-white rounded-lg shadow-sm overflow-hidden"
+            >
+              <div className="p-4 border-b flex items-center justify-between">
+                <h3 className="font-medium text-gray-700">Filters</h3>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-9 p-0">
+                    <ChevronRightIcon className={`h-4 w-4 transition-transform duration-200 ${isFilterPanelOpen ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
               </div>
+              
+              <CollapsibleContent className="p-4">
+                {/* Site Managers Section */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-3 text-gray-800">SITE MANAGER</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    {siteManagers.map((manager) => (
+                      <div key={manager} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
+                        <Checkbox 
+                          id={`site-manager-${manager}`}
+                          checked={filterSiteManagers.includes(manager)}
+                          onCheckedChange={() => handleToggleSiteManager(manager)}
+                          className="text-primary focus:ring-primary"
+                        />
+                        <label htmlFor={`site-manager-${manager}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                          <span>{manager}</span>
+                          {filterSiteManagers.includes(manager) && (
+                            <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Crew Members Section */}
-              <div>
-                <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                  {crewMembers.map((crew) => (
-                    <div key={crew} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
-                      <Checkbox 
-                        id={`crew-${crew}`}
-                        checked={filterCrewMembers.includes(crew)}
-                        onCheckedChange={() => handleToggleCrewMember(crew)}
-                        className="text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
-                        <span>{crew}</span>
-                        {filterCrewMembers.includes(crew) && (
-                          <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
-                        )}
-                      </label>
-                    </div>
-                  ))}
+                {/* Crew Members Section */}
+                <div>
+                  <h3 className="text-lg font-medium mb-3 text-gray-800">CREW MEMBERS</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    {crewMembers.map((crew) => (
+                      <div key={crew} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md">
+                        <Checkbox 
+                          id={`crew-${crew}`}
+                          checked={filterCrewMembers.includes(crew)}
+                          onCheckedChange={() => handleToggleCrewMember(crew)}
+                          className="text-primary focus:ring-primary"
+                        />
+                        <label htmlFor={`crew-${crew}`} className="text-sm text-gray-700 flex items-center justify-between w-full">
+                          <span>{crew}</span>
+                          {filterCrewMembers.includes(crew) && (
+                            <Badge variant="outline" className="ml-2 bg-primary/10 text-primary text-xs">Selected</Badge>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </div>
       </div>
