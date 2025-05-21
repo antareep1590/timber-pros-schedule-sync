@@ -280,32 +280,30 @@ const Schedule = () => {
 
                     <div className="space-y-1 overflow-y-auto max-h-[70px]">
                       {dayJobs.map((job) => (
-                        <TooltipProvider key={job.id}>
-                          <Tooltip delayDuration={100}>
-                            <TooltipTrigger asChild>
-                              <div
-                                className={cn(
-                                  "text-xs p-1 rounded truncate cursor-pointer",
-                                  job.completed ? "bg-green-100 text-green-800" : 
-                                  job.cancelled ? "bg-red-100 text-red-800" : 
-                                  job.rescheduled ? "bg-yellow-100 text-yellow-800" :
-                                  "bg-blue-100 text-blue-800"
-                                )}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleJobClick(job);
-                                }}
-                              >
-                                {job.name} - {job.startTime}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="bg-white p-2 shadow-md border rounded-md z-50">
-                              <p className="font-medium">{job.name}</p>
-                              <p className="text-xs text-gray-600">{job.clientName}</p>
-                              <p className="text-xs text-gray-600">{job.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip key={job.id}>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "text-xs p-1 rounded truncate cursor-pointer",
+                                job.completed ? "bg-green-100 text-green-800" : 
+                                job.cancelled ? "bg-red-100 text-red-800" : 
+                                job.rescheduled ? "bg-yellow-100 text-yellow-800" :
+                                "bg-blue-100 text-blue-800"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleJobClick(job);
+                              }}
+                            >
+                              {job.name} - {job.startTime}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-white p-2 shadow-md border rounded-md z-50">
+                            <p className="font-medium">{job.name}</p>
+                            <p className="text-xs text-gray-600">{job.clientName}</p>
+                            <p className="text-xs text-gray-600">{job.description}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       ))}
                     </div>
                   </div>
