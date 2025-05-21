@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -104,7 +105,7 @@ const TimeTracker = () => {
   
   // New filter states
   const [date, setDate] = useState<Date | undefined>(undefined);
-  const [roleFilter, setRoleFilter] = useState<string>("");
+  const [roleFilter, setRoleFilter] = useState<string>("all-roles");
   const [searchName, setSearchName] = useState<string>("");
   
   useEffect(() => {
@@ -258,7 +259,7 @@ const TimeTracker = () => {
       filteredResults = filteredResults.filter(log => log.date === selectedDate);
     }
     
-    if (roleFilter) {
+    if (roleFilter && roleFilter !== "all-roles") {
       filteredResults = filteredResults.filter(log => 
         log.role.toLowerCase() === roleFilter.toLowerCase()
       );
@@ -462,6 +463,7 @@ const TimeTracker = () => {
                     selected={date}
                     onSelect={setDate}
                     initialFocus
+                    className="p-3 pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -476,7 +478,7 @@ const TimeTracker = () => {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Roles</SelectItem>
+                    <SelectItem value="all-roles">All Roles</SelectItem>
                     <SelectItem value="Site Manager">Site Manager</SelectItem>
                     <SelectItem value="Crew Member">Crew Member</SelectItem>
                   </SelectContent>
@@ -507,7 +509,7 @@ const TimeTracker = () => {
                 className="w-full"
                 onClick={() => {
                   setDate(undefined);
-                  setRoleFilter("");
+                  setRoleFilter("all-roles");
                   setSearchName("");
                 }}
               >
