@@ -140,7 +140,7 @@ const Schedule = () => {
   const [userRole, setUserRole] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
 
-  // Add state for collapsible panel with default closed for crew
+  // Add state for collapsible panel with toggling based on role
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
 
   useEffect(() => {
@@ -149,11 +149,6 @@ const Schedule = () => {
     const name = localStorage.getItem("userName") || "";
     setUserRole(role);
     setUserName(name);
-    
-    // Set filter panel closed by default for crew members
-    if (role === "crew") {
-      setIsFilterPanelOpen(false);
-    }
   }, []);
 
   const firstDayOfMonth = startOfMonth(currentDate);
@@ -266,15 +261,6 @@ const Schedule = () => {
     return getFilteredJobs().filter(job => isSameDay(parseISO(job.date), date));
   };
 
-  // Get the card title based on user role
-  const getCardTitle = () => {
-    if (userRole === "crew" || userRole === "site-manager") {
-      return "Active Jobs";
-    } else {
-      return "Jobs This Week";
-    }
-  };
-
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-secondary">
@@ -381,7 +367,7 @@ const Schedule = () => {
               </div>
             </div>
 
-            {/* Filters Section - Collapsible for all roles except crew */}
+            {/* Filters Section - Now collapsible for all roles including site manager */}
             {userRole !== "crew" && (
               <Collapsible 
                 open={isFilterPanelOpen} 
@@ -389,7 +375,7 @@ const Schedule = () => {
                 className="bg-white rounded-lg shadow-sm overflow-hidden"
               >
                 <div className="p-4 border-b flex items-center justify-between">
-                  <h3 className="font-medium text-gray-700">{getCardTitle()}</h3>
+                  <h3 className="font-medium text-gray-700">Active Jobs</h3>
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="w-9 p-0">
                       <ChevronRightIcon className={`h-4 w-4 transition-transform duration-200 ${isFilterPanelOpen ? 'rotate-90' : ''}`} />
@@ -445,6 +431,47 @@ const Schedule = () => {
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+            )}
+
+            {/* For crew members, display Active Jobs section */}
+            {userRole === "crew" && (
+              <div className="lg:col-span-4 bg-white rounded-lg shadow-sm p-4">
+                <div className="p-4 border-b">
+                  <h3 className="font-medium text-gray-700">Active Jobs</h3>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-3">
+                    {getFilteredJobs().map((job) => (
+                      <div 
+                        key={job.id}
+                        className={cn(
+                          "p-3 rounded-md border cursor-pointer hover:bg-gray-50",
+                          job.completed ? "border-green-200" : 
+                          job.cancelled ? "border-red-200" : 
+                          job.rescheduled ? "border-yellow-200" :
+                          "border-blue-200"
+                        )}
+                        onClick={() => handleJobClick(job)}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="font-medium">{job.name}</h4>
+                          <span className="text-xs text-gray-500">
+                            {format(parseISO(job.date), 'dd MMM yyyy')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-1">{job.clientName}</p>
+                        <p className="text-xs text-gray-500">{job.startTime} - {job.endTime}</p>
+                      </div>
+                    ))}
+
+                    {getFilteredJobs().length === 0 && (
+                      <div className="text-center py-6 text-gray-500">
+                        No active jobs assigned to you
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
