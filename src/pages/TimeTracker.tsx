@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -47,6 +46,7 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
+import type { DateRange } from "react-day-picker";
 
 interface TimeLogEntry {
   id: string;
@@ -149,13 +149,7 @@ const TimeTracker = () => {
   const [jobs, setJobs] = useState<JobOption[]>([]);
   
   // New filter states
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
-    from: undefined,
-    to: undefined
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [jobFilter, setJobFilter] = useState<string>("all-jobs");
   const [roleFilter, setRoleFilter] = useState<string>("all-roles");
   const [searchName, setSearchName] = useState<string>("");
@@ -336,13 +330,13 @@ const TimeTracker = () => {
       filteredResults = filteredResults.filter(log => log.name === userName);
     }
     
-    // Date range filter
-    if (dateRange.from && dateRange.to) {
+    // Date range filter - updated to handle proper DateRange type
+    if (dateRange?.from && dateRange?.to) {
       filteredResults = filteredResults.filter(log => {
         const logDate = parseISO(log.date);
         return isWithinInterval(logDate, {
-          start: startOfDay(dateRange.from),
-          end: endOfDay(dateRange.to)
+          start: startOfDay(dateRange.from!),
+          end: endOfDay(dateRange.to!)
         });
       });
     }
@@ -636,7 +630,7 @@ const TimeTracker = () => {
         {/* Filters */}
         <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Date Range Filter */}
+            {/* Date Range Filter - Fixed */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Date Range</label>
               <Popover>
@@ -646,7 +640,7 @@ const TimeTracker = () => {
                     className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange.from ? (
+                    {dateRange?.from ? (
                       dateRange.to ? (
                         <>
                           {format(dateRange.from, "MMM dd, yyyy")} -{" "}
@@ -664,7 +658,7 @@ const TimeTracker = () => {
                   <Calendar
                     initialFocus
                     mode="range"
-                    defaultMonth={dateRange.from}
+                    defaultMonth={dateRange?.from}
                     selected={dateRange}
                     onSelect={setDateRange}
                     numberOfMonths={2}
@@ -735,7 +729,7 @@ const TimeTracker = () => {
                   variant="outline" 
                   className="w-full"
                   onClick={() => {
-                    setDateRange({ from: undefined, to: undefined });
+                    setDateRange(undefined);
                     setJobFilter("all-jobs");
                   }}
                 >
@@ -765,7 +759,7 @@ const TimeTracker = () => {
                   variant="outline" 
                   className="w-full"
                   onClick={() => {
-                    setDateRange({ from: undefined, to: undefined });
+                    setDateRange(undefined);
                     setJobFilter("all-jobs");
                     setRoleFilter("all-roles");
                     setSearchName("");
