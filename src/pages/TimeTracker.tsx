@@ -154,8 +154,11 @@ const TimeTracker = () => {
   const [roleFilter, setRoleFilter] = useState<string>("all-roles");
   const [searchName, setSearchName] = useState<string>("");
   const [jobFilterOpen, setJobFilterOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
+    console.log("TimeTracker: Starting initialization");
+    
     // Get user role and name from localStorage
     const role = localStorage.getItem("userRole") || "";
     const name = localStorage.getItem("userName") || "User";
@@ -164,6 +167,7 @@ const TimeTracker = () => {
     
     // Set up job options immediately
     const jobOptions = generateMockJobs();
+    console.log("TimeTracker: Generated jobs", jobOptions);
     setJobs(jobOptions);
     
     // Generate mock data
@@ -184,8 +188,11 @@ const TimeTracker = () => {
         }
       }
     }
+    
+    setIsLoading(false);
+    console.log("TimeTracker: Initialization complete");
   }, []);
-  
+
   const handleClockIn = () => {
     if (!selectedJob) {
       toast({
@@ -513,7 +520,8 @@ const TimeTracker = () => {
   };
 
   // Don't render the component until jobs are loaded
-  if (!jobs || jobs.length === 0) {
+  if (isLoading || !jobs || jobs.length === 0) {
+    console.log("TimeTracker: Still loading, jobs:", jobs);
     return (
       <div className="min-h-screen bg-secondary">
         <Navbar />
@@ -525,6 +533,8 @@ const TimeTracker = () => {
       </div>
     );
   }
+
+  console.log("TimeTracker: Rendering with jobs:", jobs.length);
 
   return (
     <div className="min-h-screen bg-secondary">
@@ -557,7 +567,7 @@ const TimeTracker = () => {
                       <CommandInput placeholder="Search job..." />
                       <CommandEmpty>No job found.</CommandEmpty>
                       <CommandGroup>
-                        {jobs.map((job) => (
+                        {jobs && jobs.length > 0 && jobs.map((job) => (
                           <CommandItem
                             key={job.value}
                             value={job.value}
@@ -710,7 +720,7 @@ const TimeTracker = () => {
                       }}>
                         All Jobs
                       </CommandItem>
-                      {jobs.map((job) => (
+                      {jobs && jobs.length > 0 && jobs.map((job) => (
                         <CommandItem
                           key={job.value}
                           onSelect={() => {
