@@ -162,7 +162,7 @@ const TimeTracker = () => {
     setUserRole(role);
     setUserName(name);
     
-    // Set up job options
+    // Set up job options immediately
     const jobOptions = generateMockJobs();
     setJobs(jobOptions);
     
@@ -512,6 +512,20 @@ const TimeTracker = () => {
     return calculateTotalHours(filteredLogs);
   };
 
+  // Don't render the component until jobs are loaded
+  if (!jobs || jobs.length === 0) {
+    return (
+      <div className="min-h-screen bg-secondary">
+        <Navbar />
+        <div className="container mx-auto py-8 px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg">Loading...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-secondary">
       <Navbar />
@@ -543,7 +557,7 @@ const TimeTracker = () => {
                       <CommandInput placeholder="Search job..." />
                       <CommandEmpty>No job found.</CommandEmpty>
                       <CommandGroup>
-                        {(jobs || []).map((job) => (
+                        {jobs.map((job) => (
                           <CommandItem
                             key={job.value}
                             value={job.value}
@@ -680,7 +694,7 @@ const TimeTracker = () => {
                   >
                     <Briefcase className="mr-2 h-4 w-4" />
                     {jobFilter !== "all-jobs" 
-                      ? (jobs || []).find(j => j.label.toLowerCase() === jobFilter.toLowerCase())?.label || "All Jobs"
+                      ? jobs.find(j => j.label.toLowerCase() === jobFilter.toLowerCase())?.label || "All Jobs"
                       : "All Jobs"
                     }
                   </Button>
@@ -696,7 +710,7 @@ const TimeTracker = () => {
                       }}>
                         All Jobs
                       </CommandItem>
-                      {(jobs || []).map((job) => (
+                      {jobs.map((job) => (
                         <CommandItem
                           key={job.value}
                           onSelect={() => {
