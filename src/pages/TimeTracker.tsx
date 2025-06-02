@@ -155,6 +155,7 @@ const TimeTracker = () => {
   const [searchName, setSearchName] = useState<string>("");
   const [jobFilterOpen, setJobFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [jobsReady, setJobsReady] = useState(false);
   
   useEffect(() => {
     console.log("TimeTracker: Starting initialization");
@@ -165,32 +166,37 @@ const TimeTracker = () => {
     setUserRole(role);
     setUserName(name);
     
-    // Set up job options immediately
+    // Set up job options immediately with a small delay to ensure state is stable
     const jobOptions = generateMockJobs();
     console.log("TimeTracker: Generated jobs", jobOptions);
-    setJobs(jobOptions);
     
-    // Generate mock data
-    setTimeLogs(generateMockData());
-    
-    // Check if user is already clocked in today
-    const today = new Date().toISOString().split('T')[0];
-    const todayLog = JSON.parse(localStorage.getItem(`timeLog-${today}`) || "null");
-    if (todayLog) {
-      setClockedIn(true);
-      setClockInTime(todayLog.clockInTime);
+    // Use setTimeout to ensure the state update is processed
+    setTimeout(() => {
+      setJobs(jobOptions);
+      setJobsReady(true);
       
-      // Also restore selected job if available
-      if (todayLog.jobId) {
-        const jobOption = jobOptions.find(job => job.value === todayLog.jobId);
-        if (jobOption) {
-          setSelectedJob(jobOption);
+      // Generate mock data
+      setTimeLogs(generateMockData());
+      
+      // Check if user is already clocked in today
+      const today = new Date().toISOString().split('T')[0];
+      const todayLog = JSON.parse(localStorage.getItem(`timeLog-${today}`) || "null");
+      if (todayLog) {
+        setClockedIn(true);
+        setClockInTime(todayLog.clockInTime);
+        
+        // Also restore selected job if available
+        if (todayLog.jobId) {
+          const jobOption = jobOptions.find(job => job.value === todayLog.jobId);
+          if (jobOption) {
+            setSelectedJob(jobOption);
+          }
         }
       }
-    }
-    
-    setIsLoading(false);
-    console.log("TimeTracker: Initialization complete");
+      
+      setIsLoading(false);
+      console.log("TimeTracker: Initialization complete");
+    }, 0);
   }, []);
 
   const handleClockIn = () => {
@@ -519,9 +525,9 @@ const TimeTracker = () => {
     return calculateTotalHours(filteredLogs);
   };
 
-  // Don't render the component until jobs are loaded
-  if (isLoading || !jobs || jobs.length === 0) {
-    console.log("TimeTracker: Still loading, jobs:", jobs);
+  // Don't render the component until jobs are loaded and ready
+  if (isLoading || !jobsReady || !jobs || jobs.length === 0) {
+    console.log("TimeTracker: Still loading, jobs:", jobs, "jobsReady:", jobsReady);
     return (
       <div className="min-h-screen bg-secondary">
         <Navbar />
@@ -549,43 +555,49 @@ const TimeTracker = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">Select Job</label>
-                <Popover open={jobCommandOpen} onOpenChange={setJobCommandOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={jobCommandOpen}
-                      disabled={clockedIn}
-                      className="w-full justify-between"
-                    >
-                      {selectedJob ? selectedJob.label : "Select job..."}
-                      <Briefcase className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search job..." />
-                      <CommandEmpty>No job found.</CommandEmpty>
-                      <CommandGroup>
-                        {jobs && jobs.length > 0 && jobs.map((job) => (
-                          <CommandItem
-                            key={job.value}
-                            value={job.value}
-                            onSelect={() => {
-                              setSelectedJob(job);
-                              setJobCommandOpen(false);
-                            }}
-                          >
-                            <div className="flex flex-col">
-                              <span>{job.label}</span>
-                              <span className="text-xs text-gray-500">{job.workOrderId} - {job.location}</span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                {jobsReady && jobs && jobs.length > 0 ? (
+                  <Popover open={jobCommandOpen} onOpenChange={setJobCommandOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={jobCommandOpen}
+                        disabled={clockedIn}
+                        className="w-full justify-between"
+                      >
+                        {selectedJob ? selectedJob.label : "Select job..."}
+                        <Briefcase className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search job..." />
+                        <CommandEmpty>No job found.</CommandEmpty>
+                        <CommandGroup>
+                          {jobs.map((job) => (
+                            <CommandItem
+                              key={job.value}
+                              value={job.value}
+                              onSelect={() => {
+                                setSelectedJob(job);
+                                setJobCommandOpen(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span>{job.label}</span>
+                                <span className="text-xs text-gray-500">{job.workOrderId} - {job.location}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Button variant="outline" disabled className="w-full">
+                    Loading jobs...
+                  </Button>
+                )}
               </div>
               
               <div className="flex items-end gap-2 md:col-span-2">
@@ -696,48 +708,54 @@ const TimeTracker = () => {
             {/* Job Filter */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Job</label>
-              <Popover open={jobFilterOpen} onOpenChange={setJobFilterOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <Briefcase className="mr-2 h-4 w-4" />
-                    {jobFilter !== "all-jobs" 
-                      ? jobs.find(j => j.label.toLowerCase() === jobFilter.toLowerCase())?.label || "All Jobs"
-                      : "All Jobs"
-                    }
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search job..." />
-                    <CommandEmpty>No job found.</CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem onSelect={() => {
-                        setJobFilter("all-jobs");
-                        setJobFilterOpen(false);
-                      }}>
-                        All Jobs
-                      </CommandItem>
-                      {jobs && jobs.length > 0 && jobs.map((job) => (
-                        <CommandItem
-                          key={job.value}
-                          onSelect={() => {
-                            setJobFilter(job.label);
-                            setJobFilterOpen(false);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            <span>{job.label}</span>
-                            <span className="text-xs text-gray-500">{job.workOrderId}</span>
-                          </div>
+              {jobsReady && jobs && jobs.length > 0 ? (
+                <Popover open={jobFilterOpen} onOpenChange={setJobFilterOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      {jobFilter !== "all-jobs" 
+                        ? jobs.find(j => j.label.toLowerCase() === jobFilter.toLowerCase())?.label || "All Jobs"
+                        : "All Jobs"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search job..." />
+                      <CommandEmpty>No job found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem onSelect={() => {
+                          setJobFilter("all-jobs");
+                          setJobFilterOpen(false);
+                        }}>
+                          All Jobs
                         </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                        {jobs.map((job) => (
+                          <CommandItem
+                            key={job.value}
+                            onSelect={() => {
+                              setJobFilter(job.label);
+                              setJobFilterOpen(false);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              <span>{job.label}</span>
+                              <span className="text-xs text-gray-500">{job.workOrderId}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <Button variant="outline" disabled className="w-full">
+                  Loading jobs...
+                </Button>
+              )}
             </div>
             
             {/* Role Filter - Admin only */}
