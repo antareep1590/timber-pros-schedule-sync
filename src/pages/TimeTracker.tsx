@@ -153,6 +153,7 @@ const TimeTracker = () => {
   const [jobFilter, setJobFilter] = useState<string>("all-jobs");
   const [roleFilter, setRoleFilter] = useState<string>("all-roles");
   const [searchName, setSearchName] = useState<string>("");
+  const [jobFilterOpen, setJobFilterOpen] = useState(false);
   
   useEffect(() => {
     // Get user role and name from localStorage
@@ -162,7 +163,8 @@ const TimeTracker = () => {
     setUserName(name);
     
     // Set up job options
-    setJobs(generateMockJobs());
+    const jobOptions = generateMockJobs();
+    setJobs(jobOptions);
     
     // Generate mock data
     setTimeLogs(generateMockData());
@@ -176,7 +178,7 @@ const TimeTracker = () => {
       
       // Also restore selected job if available
       if (todayLog.jobId) {
-        const jobOption = generateMockJobs().find(job => job.value === todayLog.jobId);
+        const jobOption = jobOptions.find(job => job.value === todayLog.jobId);
         if (jobOption) {
           setSelectedJob(jobOption);
         }
@@ -541,7 +543,7 @@ const TimeTracker = () => {
                       <CommandInput placeholder="Search job..." />
                       <CommandEmpty>No job found.</CommandEmpty>
                       <CommandGroup>
-                        {jobs.map((job) => (
+                        {(jobs || []).map((job) => (
                           <CommandItem
                             key={job.value}
                             value={job.value}
@@ -670,7 +672,7 @@ const TimeTracker = () => {
             {/* Job Filter */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Job</label>
-              <Popover>
+              <Popover open={jobFilterOpen} onOpenChange={setJobFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -678,7 +680,7 @@ const TimeTracker = () => {
                   >
                     <Briefcase className="mr-2 h-4 w-4" />
                     {jobFilter !== "all-jobs" 
-                      ? jobs.find(j => j.label.toLowerCase() === jobFilter.toLowerCase())?.label || "All Jobs"
+                      ? (jobs || []).find(j => j.label.toLowerCase() === jobFilter.toLowerCase())?.label || "All Jobs"
                       : "All Jobs"
                     }
                   </Button>
@@ -688,13 +690,19 @@ const TimeTracker = () => {
                     <CommandInput placeholder="Search job..." />
                     <CommandEmpty>No job found.</CommandEmpty>
                     <CommandGroup>
-                      <CommandItem onSelect={() => setJobFilter("all-jobs")}>
+                      <CommandItem onSelect={() => {
+                        setJobFilter("all-jobs");
+                        setJobFilterOpen(false);
+                      }}>
                         All Jobs
                       </CommandItem>
-                      {jobs.map((job) => (
+                      {(jobs || []).map((job) => (
                         <CommandItem
                           key={job.value}
-                          onSelect={() => setJobFilter(job.label)}
+                          onSelect={() => {
+                            setJobFilter(job.label);
+                            setJobFilterOpen(false);
+                          }}
                         >
                           <div className="flex flex-col">
                             <span>{job.label}</span>
